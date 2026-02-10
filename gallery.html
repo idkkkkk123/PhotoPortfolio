@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gallery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Top loading bar -->
+  <div class="top-loader" id="topLoader"></div>
+
+  <!-- Navigation -->
+  <nav class="nav glass">
+    <div class="nav-container">
+      <a class="nav-btn" href="index.html">Home</a>
+      <a class="nav-btn" href="gallery.html">Gallery</a>
+      <a class="nav-btn" href="upload.html">Upload</a>
+      <a class="nav-btn" href="display.html">Display</a>
+      <a class="nav-btn" href="albums.html">Albums</a>
+      <a class="nav-btn" href="portfolio.html">Portfolio</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container page-main">
+    <!-- Gallery Section -->
+    <section id="gallery">
+      <div class="section-header">
+        <h2>Gallery</h2>
+      </div>
+      <div class="filter-controls">
+        <label for="gallerySortSelect">Sort by:</label>
+        <select id="gallerySortSelect">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="sizeDesc">Largest File</option>
+          <option value="sizeAsc">Smallest File</option>
+          <option value="nameAsc">A to Z</option>
+          <option value="nameDesc">Z to A</option>
+        </select>
+      </div>
+      <div class="gallery-grid" id="galleryGrid"></div>
+      <div class="empty-state" id="emptyState">
+        <div class="empty-state-icon">📸</div>
+        <div class="empty-state-text">No photos yet</div>
+        <div class="empty-state-hint">Upload some photos to get started</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose">×</button>
+    <button class="lightbox-nav lightbox-prev" id="lightboxPrev">‹</button>
+    <button class="lightbox-nav lightbox-next" id="lightboxNext">›</button>
+    <div class="lightbox-body">
+      <div class="lightbox-img-wrap" id="lightboxImgWrap">
+        <img id="lightboxImg" src="" alt="">
+      </div>
+      <div class="lightbox-info" id="lightboxInfo" style="display:none;">
+        <div class="lightbox-info-row"><span class="lightbox-info-label">Filename</span><span class="lightbox-info-val" id="lbInfoName">—</span></div>
+        <div class="lightbox-info-row"><span class="lightbox-info-label">Resolution</span><span class="lightbox-info-val" id="lbInfoRes">—</span></div>
+        <div class="lightbox-info-row"><span class="lightbox-info-label">Aspect Ratio</span><span class="lightbox-info-val" id="lbInfoAspect">—</span></div>
+        <div class="lightbox-info-row"><span class="lightbox-info-label">File Size</span><span class="lightbox-info-val" id="lbInfoSize">—</span></div>
+        <div class="lightbox-info-row"><span class="lightbox-info-label">Format</span><span class="lightbox-info-val" id="lbInfoFormat">—</span></div>
+        <div class="lightbox-info-row"><span class="lightbox-info-label">Uploaded</span><span class="lightbox-info-val" id="lbInfoDate">—</span></div>
+      </div>
+    </div>
+    <button class="lightbox-info-btn" id="lightboxInfoBtn" title="Toggle Info">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+    </button>
+    <button class="lightbox-zoom-btn" id="lightboxZoomBtn" title="Toggle Zoom">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
+    </button>
+  </div>
+
+  <script src="common.js"></script>
+  <script>
+    // --- Loading bar ---
+    const topLoader = document.getElementById('topLoader');
+    function showLoader() { topLoader.classList.add('active'); }
+    function hideLoader() { topLoader.classList.remove('active'); }
+
+    let photos = [];
+    let currentSortType = 'newest';
+    let currentLightboxIndex = 0;
+    let currentPhotoList = [];
+    let isZoomMode = false;
+    let zoomLevel = 1;
+    let panX = 0, panY = 0, isPanning = false, panStartX = 0, panStartY = 0;
+
+    const galleryGrid = document.getElementById('galleryGrid');
+    const emptyState = document.getElementById('emptyState');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const lightboxImgWrap = document.getElementById('lightboxImgWrap');
+    const lightboxClose = document.getElementById('lightboxClose');
+    const lightboxPrev = document.getElementById('lightboxPrev');
+    const lightboxNext = document.getElementById('lightboxNext');
+    const lightboxInfoBtn = document.getElementById('lightboxInfoBtn');
+    const lightboxInfo = document.getElementById('lightboxInfo');
+    const lightboxZoomBtn = document.getElementById('lightboxZoomBtn');
+    const gallerySortSelect = document.getElementById('gallerySortSelect');
+
+    function renderGallery() {
+      showLoader();
+      photos = loadPhotos();
+      let filteredPhotos = sortPhotos(photos, currentSortType);
+
+      if (filteredPhotos.length === 0) {
+        galleryGrid.style.display = 'none';
+        emptyState.style.display = 'block';
+        hideLoader();
+        return;
+      }
+
+      galleryGrid.style.display = 'grid';
+      emptyState.style.display = 'none';
+
+      galleryGrid.innerHTML = filteredPhotos.map((photo, index) => {
+        const truncName = (photo.name || 'Untitled').length > 22
+          ? (photo.name || 'Untitled').substring(0, 22) + '…'
+          : (photo.name || 'Untitled');
+        return `
+        <div class="gallery-item" style="animation-delay: ${Math.min(index * 0.03, 0.6)}s" data-index="${index}">
+          <img src="${photo.src}" alt="${photo.name}" loading="lazy">
+          <button class="delete-btn" data-id="${photo.id}" title="Delete">×</button>
+          <div class="gallery-item-name">${truncName}</div>
+        </div>`;
+      }).join('');
+
+      document.querySelectorAll('.gallery-item').forEach(item => {
+        item.addEventListener('click', e => {
+          if (!e.target.classList.contains('delete-btn')) {
+            const index = parseInt(item.dataset.index, 10);
+            openLightbox(index, filteredPhotos);
+          }
+        });
+      });
+
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const next = loadPhotos().filter(p => String(p.id) !== id);
+          savePhotos(next);
+          photos = next;
+          renderGallery();
+        });
+      });
+
+      hideLoader();
+    }
+
+    // --- Lightbox ---
+    function openLightbox(index, photoList) {
+      currentLightboxIndex = index;
+      currentPhotoList = photoList;
+      updateLightboxContent();
+      lightbox.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      exitZoom();
+    }
+
+    function updateLightboxContent() {
+      const photo = currentPhotoList[currentLightboxIndex];
+      if (!photo) return;
+      lightboxImg.src = photo.src;
+
+      // Info panel
+      document.getElementById('lbInfoName').textContent = photo.name || 'Untitled';
+      document.getElementById('lbInfoSize').textContent = photo.size ? formatFileSize(photo.size) : '—';
+      document.getElementById('lbInfoDate').textContent = photo.date ? new Date(photo.date).toLocaleDateString() : '—';
+
+      // Detect format from data URL or name
+      let fmt = '—';
+      if (photo.src) {
+        const m = photo.src.match(/^data:image\/(\w+)/);
+        if (m) fmt = m[1].toUpperCase();
+      }
+      if (fmt === '—' && photo.name) {
+        const ext = photo.name.split('.').pop();
+        if (ext) fmt = ext.toUpperCase();
+      }
+      document.getElementById('lbInfoFormat').textContent = fmt;
+
+      // Resolution & aspect ratio (need image load)
+      const tmpImg = new Image();
+      tmpImg.onload = () => {
+        const w = tmpImg.naturalWidth, h = tmpImg.naturalHeight;
+        document.getElementById('lbInfoRes').textContent = `${w} × ${h}`;
+        const g = gcd(w, h);
+        document.getElementById('lbInfoAspect').textContent = `${w/g}:${h/g}`;
+      };
+      tmpImg.src = photo.src;
+    }
+
+    function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('active');
+      document.body.style.overflow = '';
+      exitZoom();
+    }
+
+    lightboxClose.addEventListener('click', closeLightbox);
+
+    lightboxPrev.addEventListener('click', () => {
+      currentLightboxIndex = (currentLightboxIndex - 1 + currentPhotoList.length) % currentPhotoList.length;
+      updateLightboxContent();
+      exitZoom();
+    });
+
+    lightboxNext.addEventListener('click', () => {
+      currentLightboxIndex = (currentLightboxIndex + 1) % currentPhotoList.length;
+      updateLightboxContent();
+      exitZoom();
+    });
+
+    lightbox.addEventListener('click', e => {
+      if (e.target === lightbox) closeLightbox();
+    });
+
+    // --- Info toggle ---
+    lightboxInfoBtn.addEventListener('click', () => {
+      const showing = lightboxInfo.style.display !== 'none';
+      lightboxInfo.style.display = showing ? 'none' : '';
+      lightboxInfoBtn.classList.toggle('active', !showing);
+    });
+
+    // --- Zoom / Magnifier ---
+    lightboxZoomBtn.addEventListener('click', () => {
+      if (isZoomMode) { exitZoom(); } else { enterZoom(); }
+    });
+
+    function enterZoom() {
+      isZoomMode = true;
+      zoomLevel = 2;
+      panX = 0; panY = 0;
+      lightboxImgWrap.classList.add('zoom-active');
+      lightboxZoomBtn.classList.add('active');
+      applyZoomTransform();
+    }
+
+    function exitZoom() {
+      isZoomMode = false;
+      zoomLevel = 1;
+      panX = 0; panY = 0;
+      lightboxImgWrap.classList.remove('zoom-active');
+      lightboxZoomBtn.classList.remove('active');
+      lightboxImg.style.transform = '';
+    }
+
+    function applyZoomTransform() {
+      lightboxImg.style.transform = `scale(${zoomLevel}) translate(${panX}px, ${panY}px)`;
+    }
+
+    lightboxImgWrap.addEventListener('mousedown', e => {
+      if (!isZoomMode) return;
+      isPanning = true;
+      panStartX = e.clientX - panX * zoomLevel;
+      panStartY = e.clientY - panY * zoomLevel;
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!isPanning || !isZoomMode) return;
+      panX = (e.clientX - panStartX) / zoomLevel;
+      panY = (e.clientY - panStartY) / zoomLevel;
+      applyZoomTransform();
+    });
+
+    document.addEventListener('mouseup', () => { isPanning = false; });
+
+    lightboxImgWrap.addEventListener('wheel', e => {
+      if (!isZoomMode) return;
+      e.preventDefault();
+      zoomLevel = Math.min(6, Math.max(1, zoomLevel + (e.deltaY > 0 ? -0.3 : 0.3)));
+      if (zoomLevel <= 1) { panX = 0; panY = 0; }
+      applyZoomTransform();
+    }, { passive: false });
+
+    // --- Keyboard ---
+    document.addEventListener('keydown', e => {
+      if (!lightbox.classList.contains('active')) return;
+      if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowLeft') lightboxPrev.click();
+      else if (e.key === 'ArrowRight') lightboxNext.click();
+    });
+
+    gallerySortSelect.addEventListener('change', (e) => {
+      currentSortType = e.target.value;
+      renderGallery();
+    });
+
+    setActiveNav();
+    renderGallery();
+  </script>
+</body>
+</html>

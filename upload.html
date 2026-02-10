@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav glass">
+    <div class="nav-container">
+      <a class="nav-btn" href="index.html">Home</a>
+      <a class="nav-btn" href="gallery.html">Gallery</a>
+      <a class="nav-btn" href="upload.html">Upload</a>
+      <a class="nav-btn" href="display.html">Display</a>
+      <a class="nav-btn" href="albums.html">Albums</a>
+      <a class="nav-btn" href="portfolio.html">Portfolio</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container page-main">
+    <!-- Upload Section -->
+    <section id="upload">
+      <div class="section-header">
+        <h2>Upload Photos</h2>
+      </div>
+
+      <div class="upload-area glass" id="uploadArea">
+        <input type="file" id="fileInput" accept="image/*">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">Click to upload a photo</div>
+        <div class="upload-hint">It will be drawn onto the canvas below</div>
+      </div>
+
+      <div class="canvas-shell glass">
+        <div class="canvas-toolbar">
+          <select id="fitMode">
+            <option value="contain">Fit: Contain</option>
+            <option value="cover">Fit: Cover</option>
+          </select>
+          <button id="clearCanvas" type="button">Clear</button>
+          <button id="saveToGallery" type="button">Save To Gallery</button>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="photoCanvas"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gallery Section -->
+    <section id="recent" style="margin-top: 4rem;">
+      <div class="section-header">
+        <h2>Recent Photos</h2>
+      </div>
+      <div class="filter-controls">
+        <label for="recentSortSelect">Sort by:</label>
+        <select id="recentSortSelect">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="sizeDesc">Largest File</option>
+          <option value="sizeAsc">Smallest File</option>
+          <option value="nameAsc">A to Z</option>
+          <option value="nameDesc">Z to A</option>
+        </select>
+      </div>
+      <div class="gallery-grid" id="recentGrid"></div>
+      <div class="empty-state" id="recentEmpty">
+        <div class="empty-state-icon">🖼️</div>
+        <div class="empty-state-text">Nothing saved yet</div>
+        <div class="empty-state-hint">Upload and click “Save To Gallery”</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="common.js"></script>
+  <script>
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const canvas = document.getElementById('photoCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const fitMode = document.getElementById('fitMode');
+    const clearCanvas = document.getElementById('clearCanvas');
+    const saveToGalleryBtn = document.getElementById('saveToGallery');
+
+    const recentGrid = document.getElementById('recentGrid');
+    const recentEmpty = document.getElementById('recentEmpty');
+    const recentSortSelect = document.getElementById('recentSortSelect');
+
+    let currentDataUrl = '';
+    let currentName = '';
+    let currentFileSize = 0;
+    let currentSortType = 'newest';
+
+    function resizeCanvasToCSS() {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+      canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+    }
+
+    function clear() {
+      resizeCanvasToCSS();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawDataUrl(dataUrl) {
+      if (!dataUrl) {
+        clear();
+        return;
+      }
+
+      const img = new Image();
+      img.onload = () => {
+        resizeCanvasToCSS();
+
+        const cw = canvas.width;
+        const ch = canvas.height;
+        const iw = img.width;
+        const ih = img.height;
+
+        const mode = fitMode.value;
+
+        const scaleContain = Math.min(cw / iw, ch / ih);
+        const scaleCover = Math.max(cw / iw, ch / ih);
+        const scale = mode === 'cover' ? scaleCover : scaleContain;
+
+        const dw = iw * scale;
+        const dh = ih * scale;
+        const dx = (cw - dw) / 2;
+        const dy = (ch - dh) / 2;
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.drawImage(img, dx, dy, dw, dh);
+      };
+      img.src = dataUrl;
+    }
+
+    function renderRecent() {
+      let photos = loadPhotos();
+      photos = sortPhotos(photos, currentSortType);
+      const list = photos.slice(0, 12);
+
+      if (list.length === 0) {
+        recentGrid.style.display = 'none';
+        recentEmpty.style.display = 'block';
+        return;
+      }
+
+      recentGrid.style.display = 'grid';
+      recentEmpty.style.display = 'none';
+
+      recentGrid.innerHTML = list.map((photo, index) => {
+        const truncName = (photo.name || 'Untitled').length > 22
+          ? (photo.name || 'Untitled').substring(0, 22) + '…'
+          : (photo.name || 'Untitled');
+        return `
+        <div class="gallery-item" style="animation-delay: ${Math.min(index * 0.03, 0.6)}s" data-id="${photo.id}">
+          <img src="${photo.src}" alt="${photo.name}" loading="lazy">
+          <div class="gallery-item-name">${truncName}</div>
+        </div>`;
+      }).join('');
+
+      recentGrid.querySelectorAll('.gallery-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const id = item.dataset.id;
+          const photo = loadPhotos().find(p => String(p.id) === id);
+          if (!photo) return;
+          currentDataUrl = photo.src;
+          currentName = photo.name;
+          currentFileSize = photo.size || 0;
+          drawDataUrl(currentDataUrl);
+        });
+      });
+    }
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    uploadArea.addEventListener('dragover', e => {
+      e.preventDefault();
+      uploadArea.style.background = 'rgba(0, 0, 0, 0.05)';
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.background = '';
+    });
+
+    uploadArea.addEventListener('drop', async e => {
+      e.preventDefault();
+      uploadArea.style.background = '';
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file || !file.type.startsWith('image/')) return;
+
+      currentName = file.name;
+      currentFileSize = file.size;
+      currentDataUrl = await fileToDataURL(file);
+      drawDataUrl(currentDataUrl);
+    });
+
+    fileInput.addEventListener('change', async e => {
+      const file = e.target.files && e.target.files[0];
+      if (!file || !file.type.startsWith('image/')) return;
+
+      currentName = file.name;
+      currentFileSize = file.size;
+      currentDataUrl = await fileToDataURL(file);
+      drawDataUrl(currentDataUrl);
+      fileInput.value = '';
+    });
+
+    fitMode.addEventListener('change', () => drawDataUrl(currentDataUrl));
+
+    clearCanvas.addEventListener('click', () => {
+      currentDataUrl = '';
+      currentName = '';
+      clear();
+    });
+
+    saveToGalleryBtn.addEventListener('click', () => {
+      if (!currentDataUrl) return;
+      const photos = loadPhotos();
+      const album = loadCurrentAlbum();
+
+      const exportUrl = canvas.toDataURL('image/png');
+      if (!exportUrl) return;
+
+      const photo = {
+        id: Date.now() + Math.random(),
+        src: exportUrl,
+        name: currentName || 'Untitled',
+        album: album === 'all' ? null : album,
+        date: new Date().toISOString(),
+        size: currentFileSize
+      };
+
+      photos.unshift(photo);
+      savePhotos(photos);
+      renderRecent();
+    });
+
+    window.addEventListener('resize', () => drawDataUrl(currentDataUrl));
+
+    recentSortSelect.addEventListener('change', (e) => {
+      currentSortType = e.target.value;
+      renderRecent();
+    });
+
+    setActiveNav();
+    clear();
+    renderRecent();
+  </script>
+</body>
+</html>
