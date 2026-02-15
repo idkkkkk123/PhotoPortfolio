@@ -57,6 +57,34 @@ let isDragging = false;
 let isResizing = false;
 let dragOffset = { x: 0, y: 0 };
 
+// --- Dirty state tracking ---
+let _lastSavedSnapshot = null;
+let _isDirty = false;
+
+function markDirty() {
+  _isDirty = true;
+  updateSaveIndicator();
+}
+
+function markClean() {
+  _isDirty = false;
+  _lastSavedSnapshot = JSON.stringify(displayState);
+  updateSaveIndicator();
+}
+
+function checkDirty() {
+  if (!displayState) return false;
+  return _isDirty || JSON.stringify(displayState) !== _lastSavedSnapshot;
+}
+
+function updateSaveIndicator() {
+  const el = document.getElementById('saveIndicator');
+  if (!el) return;
+  const dirty = checkDirty();
+  el.textContent = dirty ? 'Unsaved' : 'Saved';
+  el.className = 'de-save-indicator ' + (dirty ? 'unsaved' : 'saved');
+}
+
 // --- DOM refs (set on DOMContentLoaded) ---
 let displayCanvas, displayNameInput, loadModal, layerList, galleryPreview, pageTabs;
 let itemControls, itemPropsActive, filterControls, filterPlaceholder;
@@ -64,7 +92,7 @@ let itemControls, itemPropsActive, filterControls, filterPlaceholder;
 // =====================================================
 // INITIALIZATION
 // =====================================================
-function initializeDisplay() {
+async function initializeDisplay() {
   displayCanvas = document.getElementById('displayCanvas');
   displayNameInput = document.getElementById('displayName');
   loadModal = document.getElementById('loadModal');
@@ -76,6 +104,16 @@ function initializeDisplay() {
   filterControls = document.getElementById('filterControls');
   filterPlaceholder = document.getElementById('filterPlaceholder');
 
+  // Auth check & show/hide nav elements
+  if (isLoggedIn()) {
+    const loginBtn = document.getElementById('navLoginBtn');
+    const logoutBtn = document.getElementById('navLogoutBtn');
+    if (loginBtn) loginBtn.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = '';
+    // Load data from server
+    await initAppData();
+  }
+
   const savedDisplayId = loadCurrentDisplay();
   if (savedDisplayId) {
     const displays = loadDisplays();
@@ -83,9 +121,9 @@ function initializeDisplay() {
   }
   if (!displayState) {
     displayState = createNewDisplay('Untitled Collage');
-    const displays = loadDisplays();
-    displays.push(displayState);
-    saveDisplays(displays);
+    if (isLoggedIn()) {
+      await saveDisplayToServer(displayState);
+    }
     saveCurrentDisplay(displayState.id);
   }
 
@@ -93,10 +131,11 @@ function initializeDisplay() {
   displayNameInput.value = displayState.name;
   historyStack = [JSON.parse(JSON.stringify(displayState))];
   historyPointer = 0;
+  markClean();
 
   renderPage();
   renderPageTabs();
-  renderGalleryPreview();
+  await renderGalleryPreviewAsync();
   setActiveNav();
   bindAllEvents();
 }
@@ -271,6 +310,15 @@ function renderGalleryPreview() {
     wrap.addEventListener('click', () => addPhotoToCanvas(photo.src));
     galleryPreview.appendChild(wrap);
   });
+}
+
+async function renderGalleryPreviewAsync() {
+  if (!galleryPreview) return;
+  galleryPreview.innerHTML = '<div class="de-props-placeholder">Loading photos...</div>';
+  if (isLoggedIn()) {
+    await loadPhotosAsync();
+  }
+  renderGalleryPreview();
 }
 
 function updateCanvasBgInput() {
@@ -503,9 +551,13 @@ function updateItemInPage(item) {
 
 function updateCurrentDisplay() {
   displayState.lastModified = new Date().toISOString();
+  markDirty();
+  // Update local cache only — actual server save happens on explicit Save
   const displays = loadDisplays();
   const idx = displays.findIndex(d => d.id === displayState.id);
-  if (idx !== -1) { displays[idx] = displayState; saveDisplays(displays); }
+  if (idx !== -1) {
+    displays[idx] = JSON.parse(JSON.stringify(displayState));
+  }
 }
 
 // =====================================================
@@ -694,6 +746,10 @@ function exportAsPdf(canvas) {
 async function renderLoadModal() {
   const list = document.getElementById('displaysList');
   const empty = document.getElementById('loadsEmpty');
+  list.innerHTML = '<div class="de-props-placeholder">Loading displays...</div>';
+  empty.style.display = 'none';
+  // Refresh from server
+  if (isLoggedIn()) await loadDisplaysAsync();
   const displays = loadDisplays();
   if (displays.length === 0) { list.innerHTML = ''; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
@@ -722,9 +778,10 @@ async function renderLoadModal() {
       loadDisplayById(card.dataset.id); loadModal.classList.remove('active');
     });
   });
-  list.querySelectorAll('.de-load-del').forEach(b => b.addEventListener('click', e => {
+  list.querySelectorAll('.de-load-del').forEach(b => b.addEventListener('click', async e => {
     e.stopPropagation();
-    deleteDisplayById(b.dataset.id); renderLoadModal();
+    await deleteDisplayById(b.dataset.id);
+    await renderLoadModal();
   }));
 }
 
@@ -738,14 +795,15 @@ function loadDisplayById(id) {
     displayNameInput.value = displayState.name;
     historyStack = [JSON.parse(JSON.stringify(displayState))];
     historyPointer = 0;
+    markClean();
     renderPage(); renderPageTabs();
   }
 }
 
-function deleteDisplayById(id) {
-  let d = loadDisplays();
-  d = d.filter(x => x.id !== id);
-  saveDisplays(d);
+async function deleteDisplayById(id) {
+  if (isLoggedIn()) {
+    try { await deleteDisplayFromServer(id); } catch(e) { console.error(e); }
+  }
 }
 
 // =====================================================
@@ -768,15 +826,18 @@ function showToast(msg) {
 // =====================================================
 // CREATE FRESH DISPLAY
 // =====================================================
-function createFreshDisplay() {
+async function createFreshDisplay() {
   displayState = createNewDisplay();
   currentPage = displayState.pages[0];
   selectedItem = null; hideItemControls();
-  const d = loadDisplays(); d.push(displayState); saveDisplays(d);
+  if (isLoggedIn()) {
+    try { await saveDisplayToServer(displayState); } catch(e) { console.error(e); }
+  }
   saveCurrentDisplay(displayState.id);
   displayNameInput.value = displayState.name;
   historyStack = [JSON.parse(JSON.stringify(displayState))];
   historyPointer = 0;
+  markClean();
   renderPage(); renderPageTabs(); renderGalleryPreview();
   showToast('New display created');
 }
@@ -790,18 +851,23 @@ function bindAllEvents() {
   document.getElementById('redoBtn').addEventListener('click', redo);
 
   document.getElementById('newDisplayBtn').addEventListener('click', () => {
-    // Show confirmation if there are items on canvas
-    if (currentPage && currentPage.items.length > 0) {
+    // Only show confirmation if there are actual unsaved changes
+    if (checkDirty()) {
       document.getElementById('newConfirmModal').classList.add('active');
     } else {
       createFreshDisplay();
     }
   });
 
-  document.getElementById('newConfirmSave').addEventListener('click', () => {
+  document.getElementById('newConfirmSave').addEventListener('click', async () => {
     displayState.name = displayNameInput.value || 'Untitled Collage';
-    updateCurrentDisplay();
-    showToast('Saved');
+    try {
+      if (isLoggedIn()) await saveDisplayToServer(displayState);
+      markClean();
+      showToast('Saved');
+    } catch (err) {
+      showToast('Save failed: ' + err.message);
+    }
     document.getElementById('newConfirmModal').classList.remove('active');
     createFreshDisplay();
   });
@@ -813,10 +879,20 @@ function bindAllEvents() {
     document.getElementById('newConfirmModal').classList.remove('active');
   });
 
-  document.getElementById('saveDisplayBtn').addEventListener('click', () => {
+  document.getElementById('saveDisplayBtn').addEventListener('click', async () => {
     displayState.name = displayNameInput.value || 'Untitled Collage';
-    updateCurrentDisplay();
-    showToast('Display saved');
+    const btn = document.getElementById('saveDisplayBtn');
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+    try {
+      if (isLoggedIn()) await saveDisplayToServer(displayState);
+      markClean();
+      showToast('Display saved');
+    } catch (err) {
+      showToast('Save failed: ' + err.message);
+    }
+    btn.textContent = 'Save';
+    btn.disabled = false;
   });
 
   document.getElementById('loadDisplayBtn').addEventListener('click', () => {
@@ -856,25 +932,40 @@ function bindAllEvents() {
   document.getElementById('confirmPortfolioBtn').addEventListener('click', async () => {
     const title = document.getElementById('portfolioTitle').value.trim() || displayState.name;
     const desc = document.getElementById('portfolioDesc').value.trim();
-    // Render full-res image of the collage
-    const fullCanvas = await renderExportCanvas(1, false);
-    const fullImage = fullCanvas ? fullCanvas.toDataURL('image/png') : await generateThumbnail(currentPage);
-    const item = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      displayId: displayState.id, title, description: desc, thumbnail: fullImage,
-      createdAt: new Date().toISOString()
-    };
-    const items = JSON.parse(localStorage.getItem(STORAGE_KEYS.portfolio) || '[]');
-    items.push(item);
-    localStorage.setItem(STORAGE_KEYS.portfolio, JSON.stringify(items));
-    portfolioModal.classList.remove('active');
-    showToast('Added to Portfolio');
+    const confirmBtn = document.getElementById('confirmPortfolioBtn');
+    confirmBtn.textContent = 'Saving...';
+    confirmBtn.disabled = true;
+    try {
+      // Render full-res image of the collage
+      const fullCanvas = await renderExportCanvas(1, false);
+      const fullImage = fullCanvas ? fullCanvas.toDataURL('image/png') : await generateThumbnail(currentPage);
+      const item = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        displayId: displayState.id, title, description: desc, thumbnail: fullImage,
+        createdAt: new Date().toISOString()
+      };
+      if (isLoggedIn()) {
+        await savePortfolioItemToServer(item);
+      }
+      portfolioModal.classList.remove('active');
+      showToast('Added to Portfolio');
+    } catch (err) {
+      showToast('Failed to save: ' + err.message);
+    }
+    confirmBtn.textContent = 'Add to Portfolio';
+    confirmBtn.disabled = false;
   });
 
   // --- Load modal ---
   document.getElementById('closeLoadModal').addEventListener('click', () => loadModal.classList.remove('active'));
   document.getElementById('cancelLoadModal').addEventListener('click', () => loadModal.classList.remove('active'));
   loadModal.addEventListener('click', e => { if (e.target === loadModal) loadModal.classList.remove('active'); });
+
+  // --- Display name input — mark dirty on change ---
+  displayNameInput.addEventListener('input', () => {
+    displayState.name = displayNameInput.value || 'Untitled Collage';
+    markDirty();
+  });
 
   // --- Grid toggle ---
   document.getElementById('gridSnapToggle').addEventListener('change', () => renderPage());

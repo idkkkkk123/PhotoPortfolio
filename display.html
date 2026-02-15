@@ -17,6 +17,9 @@
       <a class="nav-btn" href="display.html">Display</a>
       <a class="nav-btn" href="albums.html">Albums</a>
       <a class="nav-btn" href="portfolio.html">Portfolio</a>
+      <span class="nav-user-badge" id="navUserBadge"></span>
+      <a class="nav-auth-btn" href="login.html" id="navLoginBtn">Log In</a>
+      <button class="nav-auth-btn" id="navLogoutBtn" style="display:none" onclick="logout()">Log Out</button>
     </div>
   </nav>
 
@@ -37,6 +40,7 @@
         <div class="de-tb-sep"></div>
         <button id="newDisplayBtn" class="de-tb-btn" title="New">New</button>
         <button id="saveDisplayBtn" class="de-tb-btn" title="Save (Ctrl+S)">Save</button>
+        <span id="saveIndicator" class="de-save-indicator saved">Saved</span>
         <button id="loadDisplayBtn" class="de-tb-btn" title="Open">Open</button>
         <button id="exportBtn" class="de-tb-btn" title="Export">Export</button>
         <button id="saveToPortfolioBtn" class="de-tb-btn de-tb-btn-accent" title="Add to Portfolio">Portfolio</button>

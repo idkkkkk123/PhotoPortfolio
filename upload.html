@@ -17,6 +17,9 @@
       <a class="nav-btn" href="display.html">Display</a>
       <a class="nav-btn" href="albums.html">Albums</a>
       <a class="nav-btn" href="portfolio.html">Portfolio</a>
+      <span class="nav-user-badge" id="navUserBadge"></span>
+      <a class="nav-auth-btn" href="login.html" id="navLoginBtn">Log In</a>
+      <button class="nav-auth-btn" id="navLogoutBtn" style="display:none" onclick="logout()">Log Out</button>
     </div>
   </nav>
 
@@ -275,33 +278,39 @@
     });
 
     // --- Save all to gallery ---
-    saveAllBtn.addEventListener('click', () => {
+    saveAllBtn.addEventListener('click', async () => {
       if (uploads.length === 0) return;
-      const photos = loadPhotos();
-      const album = loadCurrentAlbum();
+      if (!isLoggedIn()) { window.location.href = 'login.html'; return; }
 
-      uploads.forEach(u => {
-        photos.unshift({
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      saveAllBtn.disabled = true;
+      saveAllBtn.textContent = 'Saving...';
+
+      try {
+        const photosToSave = uploads.map(u => ({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9) + Math.random().toString(36).substr(2, 4),
           src: u.dataUrl,
           name: u.name || 'Untitled',
-          album: album === 'all' ? null : album,
           date: new Date().toISOString(),
           size: u.size,
           fitMode: u.fitMode || 'contain'
-        });
-      });
+        }));
 
-      savePhotos(photos);
-      uploads = [];
-      currentIndex = 0;
-      renderCarousel();
-      renderRecent();
+        await savePhotosToServer(photosToSave);
+        uploads = [];
+        currentIndex = 0;
+        renderCarousel();
+        await renderRecent();
+      } catch (err) {
+        alert('Failed to save photos: ' + err.message);
+      }
+
+      saveAllBtn.disabled = false;
+      saveAllBtn.textContent = 'Save All to Gallery';
     });
 
     // --- Recent photos ---
-    function renderRecent() {
-      let photos = loadPhotos();
+    async function renderRecent() {
+      let photos = isLoggedIn() ? await loadPhotosAsync() : [];
       photos = sortPhotos(photos, currentSortType);
       const list = photos.slice(0, 12);
 
@@ -343,6 +352,10 @@
     });
 
     setActiveNav();
+    if (isLoggedIn()) {
+      document.getElementById('navLoginBtn').style.display = 'none';
+      document.getElementById('navLogoutBtn').style.display = '';
+    }
     renderRecent();
   </script>
 </body>

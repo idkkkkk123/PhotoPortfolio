@@ -1,0 +1,26 @@
+{
+  "name": "photo-web",
+  "version": "1.0.0",
+  "description": "100% AI coding student tryna make it out of ATAR",
+  "main": "common.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/idkkkkk123/Visual-Stories.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/idkkkkk123/Visual-Stories/issues"
+  },
+  "homepage": "https://github.com/idkkkkk123/Visual-Stories#readme",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3"
+  }
+}

@@ -18,6 +18,9 @@
       <a class="nav-btn" href="display.html">Display</a>
       <a class="nav-btn" href="albums.html">Albums</a>
       <a class="nav-btn" href="portfolio.html">Portfolio</a>
+      <span class="nav-user-badge" id="navUserBadge"></span>
+      <a class="nav-auth-btn" href="login.html" id="navLoginBtn">Log In</a>
+      <button class="nav-auth-btn" id="navLogoutBtn" style="display:none" onclick="logout()">Log Out</button>
     </div>
   </nav>
 
@@ -108,13 +111,27 @@
     let editingAlbumId = null;
     let selectedPhotoIds = new Set();
 
-    // --- Storage ---
-    function loadFolders() {
-      const raw = localStorage.getItem(STORAGE_KEYS.savedAlbums);
-      return raw ? JSON.parse(raw) : [];
+    // --- Storage (API-backed) ---
+    let _foldersCache = [];
+
+    async function loadFoldersFromServer() {
+      try {
+        const data = await apiFetch('api-albums', { method: 'GET' });
+        _foldersCache = data.albums || [];
+        return _foldersCache;
+      } catch (err) {
+        console.error('Failed to load folders:', err);
+        return _foldersCache;
+      }
     }
+
+    function loadFolders() {
+      return _foldersCache;
+    }
+
     function saveFolders(folders) {
-      localStorage.setItem(STORAGE_KEYS.savedAlbums, JSON.stringify(folders));
+      _foldersCache = folders;
+      // Individual operations handle their own API calls
     }
 
     // --- Cover generation: auto-collage from folder photos ---
@@ -269,56 +286,63 @@
       });
     }
 
-    // --- Folder CRUD ---
-    function createFolder(name) {
-      const folders = loadFolders();
-      const folder = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        name: name || 'Untitled Folder',
-        photos: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      folders.push(folder);
-      saveFolders(folders);
-      renderAlbumGrid();
+    // --- Folder CRUD (API-backed) ---
+    async function createFolder(name) {
+      try {
+        const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        await apiFetch('api-albums', {
+          method: 'POST',
+          body: JSON.stringify({ id, name: name || 'Untitled Folder' })
+        });
+        await loadFoldersFromServer();
+        renderAlbumGrid();
+      } catch (err) {
+        alert('Failed to create folder: ' + err.message);
+      }
     }
 
-    function deleteFolder(id) {
-      let folders = loadFolders();
-      folders = folders.filter(f => f.id !== id);
-      saveFolders(folders);
-      renderAlbumGrid();
+    async function deleteFolder(id) {
+      try {
+        await apiFetch(`api-albums/${id}`, { method: 'DELETE' });
+        await loadFoldersFromServer();
+        renderAlbumGrid();
+      } catch (err) {
+        alert('Failed to delete folder: ' + err.message);
+      }
     }
 
-    function renameFolder(id, newName) {
-      const folders = loadFolders();
-      const f = folders.find(x => x.id === id);
-      if (f) { f.name = newName; f.updatedAt = new Date().toISOString(); }
-      saveFolders(folders);
+    async function renameFolder(id, newName) {
+      try {
+        await apiFetch(`api-albums/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ name: newName })
+        });
+        await loadFoldersFromServer();
+      } catch (err) {
+        alert('Failed to rename folder: ' + err.message);
+      }
     }
 
-    function addPhotosToFolder(folderId, photoObjects) {
-      const folders = loadFolders();
-      const f = folders.find(x => x.id === folderId);
-      if (!f) return;
-      if (!f.photos) f.photos = [];
-      photoObjects.forEach(p => {
-        if (!f.photos.find(x => String(x.id) === String(p.id))) {
-          f.photos.push({ id: p.id, src: p.src, name: p.name });
-        }
-      });
-      f.updatedAt = new Date().toISOString();
-      saveFolders(folders);
+    async function addPhotosToFolder(folderId, photoObjects) {
+      try {
+        const photoIds = photoObjects.map(p => p.id);
+        await apiFetch(`api-albums/${folderId}/photos`, {
+          method: 'POST',
+          body: JSON.stringify({ photoIds })
+        });
+        await loadFoldersFromServer();
+      } catch (err) {
+        alert('Failed to add photos: ' + err.message);
+      }
     }
 
-    function removePhotoFromFolder(folderId, photoId) {
-      const folders = loadFolders();
-      const f = folders.find(x => x.id === folderId);
-      if (!f || !f.photos) return;
-      f.photos = f.photos.filter(p => String(p.id) !== String(photoId));
-      f.updatedAt = new Date().toISOString();
-      saveFolders(folders);
+    async function removePhotoFromFolder(folderId, photoId) {
+      try {
+        await apiFetch(`api-albums/${folderId}/photos/${photoId}`, { method: 'DELETE' });
+        await loadFoldersFromServer();
+      } catch (err) {
+        alert('Failed to remove photo: ' + err.message);
+      }
     }
 
     // --- Album Viewer (folder contents) ---
@@ -365,9 +389,9 @@
       });
 
       albumViewerGrid.querySelectorAll('.alb-remove-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
+        btn.addEventListener('click', async e => {
           e.stopPropagation();
-          removePhotoFromFolder(currentViewingAlbum.id, btn.dataset.photoId);
+          await removePhotoFromFolder(currentViewingAlbum.id, btn.dataset.photoId);
           // Refresh
           const folders = loadFolders();
           currentViewingAlbum = folders.find(a => a.id === currentViewingAlbum.id);
@@ -380,9 +404,9 @@
     // --- Add Photos Picker ---
     let pickerPhotos = []; // full photo objects for the picker
 
-    function openAddPhotosModal() {
+    async function openAddPhotosModal() {
       selectedPhotoIds = new Set();
-      pickerPhotos = loadPhotos();
+      pickerPhotos = isLoggedIn() ? await loadPhotosAsync() : [];
       const existing = new Set((currentViewingAlbum.photos || []).map(p => String(p.id)));
       const grid = document.getElementById('galleryPickerGrid');
 
@@ -415,11 +439,11 @@
       addPhotosModal.classList.add('active');
     }
 
-    function confirmAddPhotos() {
+    async function confirmAddPhotos() {
       if (selectedPhotoIds.size === 0) { addPhotosModal.classList.remove('active'); return; }
       const toAdd = [...selectedPhotoIds].map(idx => pickerPhotos[parseInt(idx)]).filter(Boolean);
       if (toAdd.length === 0) { addPhotosModal.classList.remove('active'); return; }
-      addPhotosToFolder(currentViewingAlbum.id, toAdd);
+      await addPhotosToFolder(currentViewingAlbum.id, toAdd);
 
       // Refresh viewer and album grid covers
       const folders = loadFolders();
@@ -444,7 +468,7 @@
     }
 
     // --- Events ---
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('createFolderBtn').addEventListener('click', () => {
         editingAlbumId = null;
         document.getElementById('folderModalTitle').textContent = 'New Folder';
@@ -496,6 +520,11 @@
       });
 
       setActiveNav();
+      if (isLoggedIn()) {
+        document.getElementById('navLoginBtn').style.display = 'none';
+        document.getElementById('navLogoutBtn').style.display = '';
+        await loadFoldersFromServer();
+      }
       renderAlbumGrid();
     });
   </script>

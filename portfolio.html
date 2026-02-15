@@ -18,6 +18,9 @@
       <a class="nav-btn" href="display.html">Display</a>
       <a class="nav-btn" href="albums.html">Albums</a>
       <a class="nav-btn" href="portfolio.html">Portfolio</a>
+      <span class="nav-user-badge" id="navUserBadge"></span>
+      <a class="nav-auth-btn" href="login.html" id="navLoginBtn">Log In</a>
+      <button class="nav-auth-btn" id="navLogoutBtn" style="display:none" onclick="logout()">Log Out</button>
     </div>
   </nav>
 
@@ -60,16 +63,18 @@
     const portfolioEmpty = document.getElementById('portfolioEmpty');
     const portfolioLightbox = document.getElementById('portfolioLightbox');
 
+    let _localPortfolioCache = [];
+
     function loadPortfolio() {
-      const raw = localStorage.getItem(STORAGE_KEYS.portfolio);
-      return raw ? JSON.parse(raw) : [];
+      return _localPortfolioCache;
     }
     function savePortfolio(items) {
-      localStorage.setItem(STORAGE_KEYS.portfolio, JSON.stringify(items));
+      _localPortfolioCache = items;
     }
 
-    function renderPortfolio() {
-      const items = loadPortfolio();
+    async function renderPortfolio() {
+      const items = isLoggedIn() ? await loadPortfolioAsync() : [];
+      _localPortfolioCache = items;
 
       if (items.length === 0) {
         portfolioGrid.style.display = 'none';
@@ -110,12 +115,19 @@
       });
 
       portfolioGrid.querySelectorAll('.portfolio-card-del').forEach(btn => {
-        btn.addEventListener('click', e => {
+        btn.addEventListener('click', async e => {
           e.stopPropagation();
           const idx = parseInt(btn.dataset.index, 10);
           const items = loadPortfolio();
-          items.splice(idx, 1);
-          savePortfolio(items);
+          const item = items[idx];
+          if (item && item.id) {
+            try {
+              await deletePortfolioItemFromServer(item.id);
+            } catch (err) {
+              alert('Failed to delete: ' + err.message);
+              return;
+            }
+          }
           renderPortfolio();
         });
       });
@@ -148,6 +160,10 @@
     });
 
     setActiveNav();
+    if (isLoggedIn()) {
+      document.getElementById('navLoginBtn').style.display = 'none';
+      document.getElementById('navLogoutBtn').style.display = '';
+    }
     renderPortfolio();
   </script>
 </body>
