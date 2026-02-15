@@ -1,12 +1,8 @@
 [build]
-  command = "# no build step needed"
+  command = "node scripts/build-data.js"
   publish = "."
-  functions = "netlify/functions"
 
-[functions]
-  node_bundler = "esbuild"
-
-# HTML pages — always revalidate
+# HTML pages — revalidate
 [[headers]]
   for = "/*.html"
   [headers.values]
@@ -29,15 +25,15 @@
 
 # Images — long cache
 [[headers]]
-  for = "/*.{png,jpg,jpeg,gif,svg,webp,ico}"
+  for = "/*.{png,jpg,jpeg,gif,svg,webp,ico,avif}"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Fonts — long cache
+# JSON data
 [[headers]]
-  for = "/*.{woff,woff2,ttf,eot}"
+  for = "/data/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 # Default fallback
 [[headers]]

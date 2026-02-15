@@ -1,26 +1,13 @@
 {
   "name": "photo-web",
   "version": "1.0.0",
-  "description": "100% AI coding student tryna make it out of ATAR",
+  "description": "Static photography portfolio",
   "main": "common.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "echo \"No build step needed\""
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/idkkkkk123/Visual-Stories.git"
+    "build": "node scripts/build-data.js",
+    "test": "echo \"No tests\" && exit 0"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/idkkkkk123/Visual-Stories/issues"
-  },
-  "homepage": "https://github.com/idkkkkk123/Visual-Stories#readme",
-  "dependencies": {
-    "@neondatabase/serverless": "^1.0.2",
-    "bcryptjs": "^3.0.3",
-    "jsonwebtoken": "^9.0.3"
-  }
+  "license": "ISC"
 }
