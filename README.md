@@ -1,1 +1,1 @@
-100% AI coding tryna make it out of ATAR
+100% AI coding student tryna make it out of ATAR
