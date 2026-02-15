@@ -22,6 +22,13 @@
 
     <!-- Hero Section -->
     <section class="hero" id="hero">
+        <!-- Soft gradient orbs -->
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-orb hero-orb-3"></div>
+        <!-- Film grain texture -->
+        <div class="hero-grain"></div>
+        <!-- Decorative dot patterns -->
         <div class="decorative-element decorative-element-1"></div>
         <div class="decorative-element decorative-element-2"></div>
         <!-- Polaroid accents -->
@@ -178,6 +185,7 @@
         document.getElementById('infoBtn').addEventListener('click', () => infoModal.classList.add('active'));
         document.getElementById('infoModalClose').addEventListener('click', () => infoModal.classList.remove('active'));
         infoModal.addEventListener('click', e => { if (e.target === infoModal) infoModal.classList.remove('active'); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && infoModal.classList.contains('active')) infoModal.classList.remove('active'); });
     </script>
 </body>
 </html>
