@@ -1,6 +1,12 @@
 const { getDb, initDb } = require('./db');
 const { getUserFromEvent, respond, corsHeaders, unauthorized } = require('./auth');
 
+function getSubpath(event, functionName) {
+  const raw = event.path || '';
+  const pattern = new RegExp(`^/\\.netlify/functions/${functionName}/?`);
+  return raw.replace(pattern, '').replace(/^\/+/, '');
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: corsHeaders(), body: '' };
@@ -12,7 +18,7 @@ exports.handler = async (event) => {
     const user = getUserFromEvent(event);
     if (!user) return unauthorized();
 
-    const path = event.path.replace(/^\/\.netlify\/functions\/api-portfolio\/?/, '');
+    const path = getSubpath(event, 'api-portfolio');
     const segments = path.split('/').filter(Boolean);
 
     // GET / — list all portfolio items
@@ -37,12 +43,13 @@ exports.handler = async (event) => {
 
     // POST / — add portfolio item
     if (event.httpMethod === 'POST' && segments.length === 0) {
-      const body = JSON.parse(event.body);
+      let body = {};
+      try { body = event.body ? JSON.parse(event.body) : {}; } catch(e) { body = {}; }
       const id = body.id || (Date.now().toString() + Math.random().toString(36).substr(2, 9));
 
       await sql`
         INSERT INTO portfolio (id, user_id, display_id, title, description, thumbnail)
-        VALUES (${id}, ${user.id}, ${body.displayId || null}, ${body.title || 'Untitled'}, ${body.description || ''}, ${body.thumbnail})
+        VALUES (${id}, ${user.id}, ${body.displayId || null}, ${body.title || 'Untitled'}, ${body.description || ''}, ${body.thumbnail || ''})
       `;
 
       return respond(201, {
@@ -67,6 +74,6 @@ exports.handler = async (event) => {
     return respond(404, { error: 'Not found' });
   } catch (err) {
     console.error('Portfolio error:', err);
-    return respond(500, { error: 'Server error. Please try again.' });
+    return respond(500, { error: 'Server error: ' + (err.message || 'Unknown') });
   }
 };

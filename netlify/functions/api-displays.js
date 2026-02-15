@@ -1,6 +1,12 @@
 const { getDb, initDb } = require('./db');
 const { getUserFromEvent, respond, corsHeaders, unauthorized } = require('./auth');
 
+function getSubpath(event, functionName) {
+  const raw = event.path || '';
+  const pattern = new RegExp(`^/\\.netlify/functions/${functionName}/?`);
+  return raw.replace(pattern, '').replace(/^\/+/, '');
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: corsHeaders(), body: '' };
@@ -12,7 +18,7 @@ exports.handler = async (event) => {
     const user = getUserFromEvent(event);
     if (!user) return unauthorized();
 
-    const path = event.path.replace(/^\/\.netlify\/functions\/api-displays\/?/, '');
+    const path = getSubpath(event, 'api-displays');
     const segments = path.split('/').filter(Boolean);
 
     // GET / — list all displays
@@ -23,14 +29,18 @@ exports.handler = async (event) => {
         ORDER BY last_modified DESC
       `;
 
-      const result = displays.map(d => ({
-        id: d.id,
-        name: d.name,
-        pages: d.data.pages || [],
-        exportedImage: d.exported_image,
-        createdDate: d.created_at,
-        lastModified: d.last_modified
-      }));
+      const result = displays.map(d => {
+        let pages = [];
+        try { pages = (typeof d.data === 'string' ? JSON.parse(d.data) : d.data).pages || []; } catch(e) { pages = []; }
+        return {
+          id: d.id,
+          name: d.name,
+          pages,
+          exportedImage: d.exported_image,
+          createdDate: d.created_at,
+          lastModified: d.last_modified
+        };
+      });
 
       return respond(200, { displays: result });
     }
@@ -46,11 +56,13 @@ exports.handler = async (event) => {
       if (result.length === 0) return respond(404, { error: 'Display not found' });
 
       const d = result[0];
+      let pages = [];
+      try { pages = (typeof d.data === 'string' ? JSON.parse(d.data) : d.data).pages || []; } catch(e) { pages = []; }
       return respond(200, {
         display: {
           id: d.id,
           name: d.name,
-          pages: d.data.pages || [],
+          pages,
           exportedImage: d.exported_image,
           createdDate: d.created_at,
           lastModified: d.last_modified
@@ -60,7 +72,8 @@ exports.handler = async (event) => {
 
     // POST / — create or update display
     if (event.httpMethod === 'POST' && segments.length === 0) {
-      const body = JSON.parse(event.body);
+      let body = {};
+      try { body = event.body ? JSON.parse(event.body) : {}; } catch(e) { body = {}; }
       const id = body.id || (Date.now().toString() + Math.random().toString(36).substr(2, 9));
       const name = body.name || 'Untitled Collage';
       const data = { pages: body.pages || [] };
@@ -91,6 +104,6 @@ exports.handler = async (event) => {
     return respond(404, { error: 'Not found' });
   } catch (err) {
     console.error('Displays error:', err);
-    return respond(500, { error: 'Server error. Please try again.' });
+    return respond(500, { error: 'Server error: ' + (err.message || 'Unknown') });
   }
 };

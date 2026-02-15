@@ -71,31 +71,46 @@ async function apiFetch(endpoint, options = {}) {
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}/${endpoint}`;
 
+  let res;
   try {
-    const res = await fetch(url, { ...options, headers });
-    const data = await res.json();
+    res = await fetch(url, { ...options, headers });
+  } catch (networkErr) {
+    console.error('Network error — API unreachable:', networkErr);
+    throw new Error('Network error. Please check your connection.');
+  }
 
-    if (res.status === 401) {
-      // Token expired or invalid
+  // Try to parse JSON, but handle non-JSON responses (e.g. Netlify error pages)
+  let data;
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    try { data = await res.json(); } catch(e) { data = {}; }
+  } else {
+    const text = await res.text();
+    console.error('Non-JSON response from', url, ':', text.substring(0, 200));
+    if (!res.ok) {
+      throw new Error(`Server returned ${res.status}. Check that Netlify Functions are deployed and DATABASE_URL is set.`);
+    }
+    try { data = JSON.parse(text); } catch(e) { data = {}; }
+  }
+
+  if (res.status === 401) {
+    // Only clear auth and redirect if this was NOT a login/signup attempt
+    const isAuthEndpoint = endpoint.includes('api-auth/login') || endpoint.includes('api-auth/signup');
+    if (!isAuthEndpoint) {
       setAuth(null, null);
-      if (!window.location.pathname.includes('login.html') && !window.location.pathname.endsWith('/')) {
+      const page = (window.location.pathname.split('/').pop() || '').toLowerCase();
+      if (page !== 'login.html' && page !== 'index.html' && page !== '') {
         window.location.href = 'login.html';
       }
-      throw new Error(data.error || 'Unauthorized');
     }
-
-    if (!res.ok) {
-      throw new Error(data.error || `API error ${res.status}`);
-    }
-
-    return data;
-  } catch (err) {
-    if (err.message === 'Failed to fetch') {
-      console.error('Network error — API unreachable');
-      throw new Error('Network error. Please check your connection.');
-    }
-    throw err;
+    throw new Error(data.error || 'Unauthorized');
   }
+
+  if (!res.ok) {
+    throw new Error(data.error || `API error ${res.status}`);
+  }
+
+  return data;
 }
 
 // =====================================================

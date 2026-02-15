@@ -1,6 +1,7 @@
 const { neon } = require('@neondatabase/serverless');
 
 let sql;
+let _schemaReady = false;
 
 function getDb() {
   if (!sql) {
@@ -13,9 +14,13 @@ function getDb() {
 }
 
 async function initDb() {
-  const sql = getDb();
+  // Only run schema creation once per cold start
+  if (_schemaReady) return;
 
-  await sql`
+  const db = getDb();
+
+  // Run all CREATE TABLE IF NOT EXISTS in a single batch
+  await db`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
       username VARCHAR(100) UNIQUE NOT NULL,
@@ -25,7 +30,7 @@ async function initDb() {
     )
   `;
 
-  await sql`
+  await db`
     CREATE TABLE IF NOT EXISTS photos (
       id VARCHAR(100) PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -38,9 +43,9 @@ async function initDb() {
     )
   `;
 
-  await sql`CREATE INDEX IF NOT EXISTS idx_photos_user ON photos(user_id)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_photos_user ON photos(user_id)`;
 
-  await sql`
+  await db`
     CREATE TABLE IF NOT EXISTS albums (
       id VARCHAR(100) PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -50,9 +55,9 @@ async function initDb() {
     )
   `;
 
-  await sql`CREATE INDEX IF NOT EXISTS idx_albums_user ON albums(user_id)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_albums_user ON albums(user_id)`;
 
-  await sql`
+  await db`
     CREATE TABLE IF NOT EXISTS album_photos (
       album_id VARCHAR(100) NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
       photo_id VARCHAR(100) NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
@@ -61,7 +66,7 @@ async function initDb() {
     )
   `;
 
-  await sql`
+  await db`
     CREATE TABLE IF NOT EXISTS displays (
       id VARCHAR(100) PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -73,9 +78,9 @@ async function initDb() {
     )
   `;
 
-  await sql`CREATE INDEX IF NOT EXISTS idx_displays_user ON displays(user_id)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_displays_user ON displays(user_id)`;
 
-  await sql`
+  await db`
     CREATE TABLE IF NOT EXISTS portfolio (
       id VARCHAR(100) PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -87,8 +92,9 @@ async function initDb() {
     )
   `;
 
-  await sql`CREATE INDEX IF NOT EXISTS idx_portfolio_user ON portfolio(user_id)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_portfolio_user ON portfolio(user_id)`;
 
+  _schemaReady = true;
   return true;
 }
 

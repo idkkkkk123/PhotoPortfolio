@@ -1,6 +1,13 @@
 const bcrypt = require('bcryptjs');
 const { getDb, initDb } = require('./db');
-const { createToken, respond, corsHeaders } = require('./auth');
+const { createToken, verifyToken, respond, corsHeaders } = require('./auth');
+
+function getSubpath(event, functionName) {
+  // Works on both Netlify deployed and netlify dev
+  const raw = event.path || '';
+  const pattern = new RegExp(`^/\\.netlify/functions/${functionName}/?`);
+  return raw.replace(pattern, '').replace(/^\/+/, '');
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -10,8 +17,9 @@ exports.handler = async (event) => {
   try {
     await initDb();
     const sql = getDb();
-    const path = event.path.replace(/^\/\.netlify\/functions\/api-auth\/?/, '');
-    const body = event.body ? JSON.parse(event.body) : {};
+    const path = getSubpath(event, 'api-auth');
+    let body = {};
+    try { body = event.body ? JSON.parse(event.body) : {}; } catch(e) { body = {}; }
 
     // POST /signup
     if (event.httpMethod === 'POST' && path === 'signup') {
@@ -85,11 +93,10 @@ exports.handler = async (event) => {
 
     // GET /me — verify token and return user info
     if (event.httpMethod === 'GET' && path === 'me') {
-      const authHeader = event.headers.authorization || '';
+      const authHeader = (event.headers || {}).authorization || (event.headers || {}).Authorization || '';
       const tokenStr = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
       if (!tokenStr) return respond(401, { error: 'No token provided.' });
 
-      const { verifyToken } = require('./auth');
       const decoded = verifyToken(tokenStr);
       if (!decoded) return respond(401, { error: 'Invalid or expired token.' });
 
@@ -104,6 +111,6 @@ exports.handler = async (event) => {
     return respond(404, { error: 'Not found' });
   } catch (err) {
     console.error('Auth error:', err);
-    return respond(500, { error: 'Server error. Please try again.' });
+    return respond(500, { error: 'Server error: ' + (err.message || 'Unknown') });
   }
 };

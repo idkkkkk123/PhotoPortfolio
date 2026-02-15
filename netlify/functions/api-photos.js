@@ -1,6 +1,12 @@
 const { getDb, initDb } = require('./db');
 const { getUserFromEvent, respond, corsHeaders, unauthorized } = require('./auth');
 
+function getSubpath(event, functionName) {
+  const raw = event.path || '';
+  const pattern = new RegExp(`^/\\.netlify/functions/${functionName}/?`);
+  return raw.replace(pattern, '').replace(/^\/+/, '');
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: corsHeaders(), body: '' };
@@ -12,10 +18,11 @@ exports.handler = async (event) => {
     const user = getUserFromEvent(event);
     if (!user) return unauthorized();
 
-    const path = event.path.replace(/^\/\.netlify\/functions\/api-photos\/?/, '');
+    const path = getSubpath(event, 'api-photos');
+    const segments = path.split('/').filter(Boolean);
 
     // GET / — list all photos for user
-    if (event.httpMethod === 'GET' && !path) {
+    if (event.httpMethod === 'GET' && segments.length === 0) {
       const photos = await sql`
         SELECT id, name, src, size, fit_mode, date, created_at
         FROM photos WHERE user_id = ${user.id}
@@ -25,8 +32,9 @@ exports.handler = async (event) => {
     }
 
     // POST / — create photo(s)
-    if (event.httpMethod === 'POST' && !path) {
-      const body = JSON.parse(event.body);
+    if (event.httpMethod === 'POST' && segments.length === 0) {
+      let body = {};
+      try { body = event.body ? JSON.parse(event.body) : {}; } catch(e) { body = {}; }
       const photos = Array.isArray(body.photos) ? body.photos : [body];
       const created = [];
 
@@ -48,8 +56,8 @@ exports.handler = async (event) => {
     }
 
     // DELETE /:id — delete a photo
-    if (event.httpMethod === 'DELETE' && path) {
-      const photoId = path;
+    if (event.httpMethod === 'DELETE' && segments.length === 1) {
+      const photoId = segments[0];
       await sql`DELETE FROM photos WHERE id = ${photoId} AND user_id = ${user.id}`;
       return respond(200, { success: true });
     }
@@ -57,6 +65,6 @@ exports.handler = async (event) => {
     return respond(404, { error: 'Not found' });
   } catch (err) {
     console.error('Photos error:', err);
-    return respond(500, { error: 'Server error. Please try again.' });
+    return respond(500, { error: 'Server error: ' + (err.message || 'Unknown') });
   }
 };

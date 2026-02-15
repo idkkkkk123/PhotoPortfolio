@@ -1,6 +1,12 @@
 const { getDb, initDb } = require('./db');
 const { getUserFromEvent, respond, corsHeaders, unauthorized } = require('./auth');
 
+function getSubpath(event, functionName) {
+  const raw = event.path || '';
+  const pattern = new RegExp(`^/\\.netlify/functions/${functionName}/?`);
+  return raw.replace(pattern, '').replace(/^\/+/, '');
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: corsHeaders(), body: '' };
@@ -12,7 +18,7 @@ exports.handler = async (event) => {
     const user = getUserFromEvent(event);
     if (!user) return unauthorized();
 
-    const path = event.path.replace(/^\/\.netlify\/functions\/api-albums\/?/, '');
+    const path = getSubpath(event, 'api-albums');
     const segments = path.split('/').filter(Boolean);
 
     // GET / — list all albums with their photos
@@ -47,7 +53,8 @@ exports.handler = async (event) => {
 
     // POST / — create album
     if (event.httpMethod === 'POST' && segments.length === 0) {
-      const body = JSON.parse(event.body);
+      let body = {};
+      try { body = event.body ? JSON.parse(event.body) : {}; } catch(e) { body = {}; }
       const id = body.id || (Date.now().toString() + Math.random().toString(36).substr(2, 9));
       const name = body.name || 'Untitled Folder';
 
@@ -62,7 +69,8 @@ exports.handler = async (event) => {
     // PUT /:id — rename album
     if (event.httpMethod === 'PUT' && segments.length === 1) {
       const albumId = segments[0];
-      const body = JSON.parse(event.body);
+      let body = {};
+      try { body = event.body ? JSON.parse(event.body) : {}; } catch(e) { body = {}; }
 
       await sql`
         UPDATE albums SET name = ${body.name}, updated_at = NOW()
@@ -82,7 +90,8 @@ exports.handler = async (event) => {
     // POST /:id/photos — add photos to album
     if (event.httpMethod === 'POST' && segments.length === 2 && segments[1] === 'photos') {
       const albumId = segments[0];
-      const body = JSON.parse(event.body);
+      let body = {};
+      try { body = event.body ? JSON.parse(event.body) : {}; } catch(e) { body = {}; }
       const photoIds = body.photoIds || [];
 
       for (const photoId of photoIds) {
@@ -112,6 +121,6 @@ exports.handler = async (event) => {
     return respond(404, { error: 'Not found' });
   } catch (err) {
     console.error('Albums error:', err);
-    return respond(500, { error: 'Server error. Please try again.' });
+    return respond(500, { error: 'Server error: ' + (err.message || 'Unknown') });
   }
 };

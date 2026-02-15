@@ -20,7 +20,8 @@ function verifyToken(token) {
 }
 
 function getUserFromEvent(event) {
-  const authHeader = event.headers.authorization || event.headers.Authorization || '';
+  const headers = event.headers || {};
+  const authHeader = headers.authorization || headers.Authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (!token) return null;
   return verifyToken(token);
