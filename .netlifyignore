@@ -1,0 +1,10 @@
+# Exclude non-static files from the published site
+node_modules/
+package.json
+package-lock.json
+netlify/
+.git/
+.gitignore
+.env
+DEPLOYMENT.md
+README.md
