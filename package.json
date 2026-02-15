@@ -4,7 +4,8 @@
   "description": "100% AI coding student tryna make it out of ATAR",
   "main": "common.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo \"No build step needed\""
   },
   "repository": {
     "type": "git",
@@ -13,7 +14,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/idkkkkk123/Visual-Stories/issues"
   },
