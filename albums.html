@@ -372,36 +372,40 @@
           const folders = loadFolders();
           currentViewingAlbum = folders.find(a => a.id === currentViewingAlbum.id);
           renderAlbumContents();
+          renderAlbumGrid();
         });
       });
     }
 
     // --- Add Photos Picker ---
+    let pickerPhotos = []; // full photo objects for the picker
+
     function openAddPhotosModal() {
       selectedPhotoIds = new Set();
-      const allPhotos = loadPhotos();
+      pickerPhotos = loadPhotos();
       const existing = new Set((currentViewingAlbum.photos || []).map(p => String(p.id)));
+      const grid = document.getElementById('galleryPickerGrid');
 
-      if (allPhotos.length === 0) {
-        document.getElementById('galleryPickerGrid').innerHTML = '<div class="empty-state" style="padding:2rem;"><p>No photos in gallery. Upload some first.</p></div>';
+      if (pickerPhotos.length === 0) {
+        grid.innerHTML = '<div class="empty-state" style="padding:2rem;"><p>No photos in gallery. Upload some first.</p></div>';
       } else {
-        document.getElementById('galleryPickerGrid').innerHTML = allPhotos.map(p => `
-          <div class="alb-picker-item ${existing.has(String(p.id)) ? 'already-added' : ''}" data-id="${p.id}">
+        grid.innerHTML = pickerPhotos.map((p, idx) => `
+          <div class="alb-picker-item ${existing.has(String(p.id)) ? 'already-added' : ''}" data-idx="${idx}">
             <img src="${p.src}" alt="${p.name || ''}" loading="lazy">
             <div class="alb-picker-check"></div>
             ${existing.has(String(p.id)) ? '<div class="alb-picker-badge">Added</div>' : ''}
           </div>
         `).join('');
 
-        document.querySelectorAll('.alb-picker-item').forEach(item => {
+        grid.querySelectorAll('.alb-picker-item').forEach(item => {
           if (item.classList.contains('already-added')) return;
           item.addEventListener('click', () => {
-            const id = item.dataset.id;
-            if (selectedPhotoIds.has(id)) {
-              selectedPhotoIds.delete(id);
+            const idx = item.dataset.idx;
+            if (selectedPhotoIds.has(idx)) {
+              selectedPhotoIds.delete(idx);
               item.classList.remove('selected');
             } else {
-              selectedPhotoIds.add(id);
+              selectedPhotoIds.add(idx);
               item.classList.add('selected');
             }
           });
@@ -413,14 +417,15 @@
 
     function confirmAddPhotos() {
       if (selectedPhotoIds.size === 0) { addPhotosModal.classList.remove('active'); return; }
-      const allPhotos = loadPhotos();
-      const toAdd = allPhotos.filter(p => selectedPhotoIds.has(String(p.id)));
+      const toAdd = [...selectedPhotoIds].map(idx => pickerPhotos[parseInt(idx)]).filter(Boolean);
+      if (toAdd.length === 0) { addPhotosModal.classList.remove('active'); return; }
       addPhotosToFolder(currentViewingAlbum.id, toAdd);
 
-      // Refresh
+      // Refresh viewer and album grid covers
       const folders = loadFolders();
       currentViewingAlbum = folders.find(a => a.id === currentViewingAlbum.id);
       renderAlbumContents();
+      renderAlbumGrid();
       addPhotosModal.classList.remove('active');
     }
 

@@ -151,10 +151,12 @@ function renderItem(item) {
   const div = document.createElement('div');
   div.className = 'de-item';
   div.dataset.itemId = item.id;
-  div.style.left = item.x + 'px';
-  div.style.top = item.y + 'px';
-  div.style.width = item.width + 'px';
-  div.style.height = item.height + 'px';
+  // Use percentage positioning so items scale with the CSS canvas size
+  const pw = currentPage.width, ph = currentPage.height;
+  div.style.left = (item.x / pw * 100) + '%';
+  div.style.top = (item.y / ph * 100) + '%';
+  div.style.width = (item.width / pw * 100) + '%';
+  div.style.height = (item.height / ph * 100) + '%';
   div.style.zIndex = item.zIndex || 1;
 
   // Build transform
@@ -280,6 +282,14 @@ function updateCanvasBgInput() {
 // SELECTION & CONTROLS
 // =====================================================
 function selectItem(item) {
+  // Avoid re-render if same item is already selected (prevents drag jump)
+  if (selectedItem && selectedItem.id === item.id) {
+    // Sync latest position from the page data
+    const pageItem = currentPage.items.find(i => i.id === item.id);
+    if (pageItem) selectedItem = JSON.parse(JSON.stringify(pageItem));
+    showItemControls();
+    return;
+  }
   selectedItem = JSON.parse(JSON.stringify(item));
   renderPage();
   showItemControls();
@@ -336,23 +346,43 @@ function hideItemControls() {
 }
 
 // =====================================================
+// COORDINATE HELPERS
+// =====================================================
+function getCanvasScale() {
+  if (!currentPage || !displayCanvas) return 1;
+  const rect = displayCanvas.getBoundingClientRect();
+  return rect.width / currentPage.width;
+}
+
+function screenToCanvas(screenX, screenY) {
+  const rect = displayCanvas.getBoundingClientRect();
+  const scale = getCanvasScale();
+  return {
+    x: (screenX - rect.left) / scale,
+    y: (screenY - rect.top) / scale
+  };
+}
+
+// =====================================================
 // DRAGGING
 // =====================================================
 function startDrag(e, item) {
   if (e.button !== 0) return;
   isDragging = true;
-  const rect = displayCanvas.getBoundingClientRect();
-  dragOffset.x = e.clientX - rect.left - item.x;
-  dragOffset.y = e.clientY - rect.top - item.y;
+  // Always use selectedItem (authoritative deep copy) for offset, not the stale item ref
+  const src = selectedItem && selectedItem.id === item.id ? selectedItem : item;
+  const pos = screenToCanvas(e.clientX, e.clientY);
+  dragOffset.x = pos.x - src.x;
+  dragOffset.y = pos.y - src.y;
   document.addEventListener('mousemove', onDrag);
   document.addEventListener('mouseup', endDrag);
 }
 
 function onDrag(e) {
   if (!isDragging || !selectedItem) return;
-  const rect = displayCanvas.getBoundingClientRect();
-  let x = e.clientX - rect.left - dragOffset.x;
-  let y = e.clientY - rect.top - dragOffset.y;
+  const pos = screenToCanvas(e.clientX, e.clientY);
+  let x = pos.x - dragOffset.x;
+  let y = pos.y - dragOffset.y;
   if (document.getElementById('gridSnapToggle').checked) {
     const gs = parseInt(document.getElementById('gridSize').value) || 20;
     x = Math.round(x / gs) * gs;
@@ -363,8 +393,9 @@ function onDrag(e) {
   // Direct DOM update for snappy drag (avoid full re-render)
   const el = displayCanvas.querySelector(`[data-item-id="${selectedItem.id}"]`);
   if (el) {
-    el.style.left = selectedItem.x + 'px';
-    el.style.top = selectedItem.y + 'px';
+    const pw = currentPage.width, ph = currentPage.height;
+    el.style.left = (selectedItem.x / pw * 100) + '%';
+    el.style.top = (selectedItem.y / ph * 100) + '%';
   }
   updateItemInPage(selectedItem);
   showItemControls();
@@ -376,6 +407,7 @@ function endDrag() {
   document.removeEventListener('mousemove', onDrag);
   document.removeEventListener('mouseup', endDrag);
   pushHistory();
+  updateCurrentDisplay();
 }
 
 // =====================================================
@@ -384,12 +416,16 @@ function endDrag() {
 function startResize(e, item, corner) {
   e.stopPropagation();
   isResizing = true;
+  const scale = getCanvasScale();
   const startX = e.clientX, startY = e.clientY;
-  const startW = item.width, startH = item.height;
-  const startIX = item.x, startIY = item.y;
+  // Use selectedItem (authoritative) for start values, not the closure's item ref
+  const src = selectedItem && selectedItem.id === item.id ? selectedItem : item;
+  const startW = src.width, startH = src.height;
+  const startIX = src.x, startIY = src.y;
 
   function onResize(me) {
-    const dx = me.clientX - startX, dy = me.clientY - startY;
+    const dx = (me.clientX - startX) / scale;
+    const dy = (me.clientY - startY) / scale;
     const min = 30;
     let nw = startW, nh = startH, nx = startIX, ny = startIY;
     if (corner.includes('e')) nw = Math.max(min, startW + dx);
@@ -401,8 +437,9 @@ function startResize(e, item, corner) {
     // Direct DOM update for snappy resize
     const el = displayCanvas.querySelector(`[data-item-id="${selectedItem.id}"]`);
     if (el) {
-      el.style.left = nx + 'px'; el.style.top = ny + 'px';
-      el.style.width = nw + 'px'; el.style.height = nh + 'px';
+      const pw = currentPage.width, ph = currentPage.height;
+      el.style.left = (nx / pw * 100) + '%'; el.style.top = (ny / ph * 100) + '%';
+      el.style.width = (nw / pw * 100) + '%'; el.style.height = (nh / ph * 100) + '%';
     }
     updateItemInPage(selectedItem);
     showItemControls();
@@ -412,6 +449,7 @@ function startResize(e, item, corner) {
     document.removeEventListener('mousemove', onResize);
     document.removeEventListener('mouseup', endResize);
     pushHistory();
+    updateCurrentDisplay();
   }
   document.addEventListener('mousemove', onResize);
   document.addEventListener('mouseup', endResize);
@@ -422,11 +460,12 @@ function startResize(e, item, corner) {
 // =====================================================
 function addPhotoToCanvas(src, x, y) {
   pushHistory();
-  if (x == null) x = 40 + Math.random() * 60;
-  if (y == null) y = 40 + Math.random() * 60;
+  const defaultSize = Math.round(Math.min(currentPage.width, currentPage.height) * 0.2);
+  if (x == null) x = Math.round(currentPage.width * 0.02 + Math.random() * currentPage.width * 0.05);
+  if (y == null) y = Math.round(currentPage.height * 0.02 + Math.random() * currentPage.height * 0.05);
   const item = {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-    type: 'image', x, y, width: 250, height: 250,
+    type: 'image', x, y, width: defaultSize, height: defaultSize,
     rotation: 0, opacity: 100, borderRadius: 0,
     brightness: 100, contrast: 100, saturate: 100, grayscale: 0, blur: 0,
     flipH: false, flipV: false,

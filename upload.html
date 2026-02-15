@@ -29,24 +29,31 @@
       </div>
 
       <div class="upload-area glass" id="uploadArea">
-        <input type="file" id="fileInput" accept="image/*">
+        <input type="file" id="fileInput" accept="image/*" multiple>
         <div class="upload-icon">📷</div>
-        <div class="upload-text">Click to upload a photo</div>
-        <div class="upload-hint">It will be drawn onto the canvas below</div>
+        <div class="upload-text">Click or drag to upload photos</div>
+        <div class="upload-hint">Select multiple files at once</div>
       </div>
 
-      <div class="canvas-shell glass">
-        <div class="canvas-toolbar">
-          <select id="fitMode">
-            <option value="contain">Fit: Contain</option>
-            <option value="cover">Fit: Cover</option>
-          </select>
-          <button id="clearCanvas" type="button">Clear</button>
-          <button id="saveToGallery" type="button">Save To Gallery</button>
+      <!-- Preview Carousel -->
+      <div class="preview-carousel glass" id="previewCarousel" style="display:none;">
+        <div class="preview-toolbar">
+          <span class="preview-counter" id="previewCounter">1 / 1</span>
+          <div class="preview-toolbar-btns">
+            <div class="fit-toggle" id="fitToggle">
+              <button class="fit-toggle-btn active" data-fit="contain" type="button">Contain</button>
+              <button class="fit-toggle-btn" data-fit="cover" type="button">Cover</button>
+            </div>
+            <button id="clearCurrent" class="btn-action" type="button">Clear This</button>
+            <button id="saveAllToGallery" class="btn-action btn-action-primary" type="button">Save All to Gallery</button>
+          </div>
         </div>
-        <div class="canvas-wrap">
-          <canvas id="photoCanvas"></canvas>
+        <div class="preview-viewport" id="previewViewport">
+          <button class="preview-nav preview-nav-prev" id="prevBtn" type="button">&#8249;</button>
+          <div class="preview-track" id="previewTrack"></div>
+          <button class="preview-nav preview-nav-next" id="nextBtn" type="button">&#8250;</button>
         </div>
+        <div class="preview-dots" id="previewDots"></div>
       </div>
     </section>
 
@@ -70,7 +77,7 @@
       <div class="empty-state" id="recentEmpty">
         <div class="empty-state-icon">🖼️</div>
         <div class="empty-state-text">Nothing saved yet</div>
-        <div class="empty-state-hint">Upload and click “Save To Gallery”</div>
+        <div class="empty-state-hint">Upload and click "Save All to Gallery"</div>
       </div>
     </section>
   </main>
@@ -79,68 +86,220 @@
   <script>
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
-    const canvas = document.getElementById('photoCanvas');
-    const ctx = canvas.getContext('2d');
-
-    const fitMode = document.getElementById('fitMode');
-    const clearCanvas = document.getElementById('clearCanvas');
-    const saveToGalleryBtn = document.getElementById('saveToGallery');
-
+    const fitToggle = document.getElementById('fitToggle');
+    const previewCarousel = document.getElementById('previewCarousel');
+    const previewTrack = document.getElementById('previewTrack');
+    const previewDots = document.getElementById('previewDots');
+    const previewCounter = document.getElementById('previewCounter');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const clearCurrentBtn = document.getElementById('clearCurrent');
+    const saveAllBtn = document.getElementById('saveAllToGallery');
     const recentGrid = document.getElementById('recentGrid');
     const recentEmpty = document.getElementById('recentEmpty');
     const recentSortSelect = document.getElementById('recentSortSelect');
 
-    let currentDataUrl = '';
-    let currentName = '';
-    let currentFileSize = 0;
+    let uploads = []; // { dataUrl, name, size, fitMode }
+    let currentIndex = 0;
     let currentSortType = 'newest';
 
-    function resizeCanvasToCSS() {
-      const rect = canvas.getBoundingClientRect();
-      const ratio = window.devicePixelRatio || 1;
-      canvas.width = Math.max(1, Math.floor(rect.width * ratio));
-      canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+    // --- Swipe state ---
+    let swipeStartX = 0, swipeStartY = 0, swiping = false, swipeDx = 0;
+
+    // --- Add files to upload queue ---
+    async function addFiles(fileList) {
+      const startIdx = uploads.length;
+      for (const file of fileList) {
+        if (file.type.startsWith('image/')) {
+          const dataUrl = await fileToDataURL(file);
+          uploads.push({ dataUrl, name: file.name, size: file.size, fitMode: 'contain' });
+        }
+      }
+      if (uploads.length > 0) {
+        currentIndex = startIdx < uploads.length ? startIdx : uploads.length - 1;
+        renderCarousel();
+      }
     }
 
-    function clear() {
-      resizeCanvasToCSS();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    function drawDataUrl(dataUrl) {
-      if (!dataUrl) {
-        clear();
+    // --- Render carousel ---
+    function renderCarousel() {
+      if (uploads.length === 0) {
+        previewCarousel.style.display = 'none';
         return;
       }
+      previewCarousel.style.display = 'block';
 
-      const img = new Image();
-      img.onload = () => {
-        resizeCanvasToCSS();
+      // Build slides
+      previewTrack.innerHTML = '';
+      uploads.forEach((u, i) => {
+        const slide = document.createElement('div');
+        slide.className = 'preview-slide' + (i === currentIndex ? ' active' : '');
+        const img = document.createElement('img');
+        img.src = u.dataUrl;
+        img.alt = u.name;
+        img.style.objectFit = u.fitMode || 'contain';
+        slide.appendChild(img);
+        previewTrack.appendChild(slide);
+      });
 
-        const cw = canvas.width;
-        const ch = canvas.height;
-        const iw = img.width;
-        const ih = img.height;
+      // Position track
+      updateTrackPosition(0);
 
-        const mode = fitMode.value;
+      // Counter
+      previewCounter.textContent = `${currentIndex + 1} / ${uploads.length}`;
 
-        const scaleContain = Math.min(cw / iw, ch / ih);
-        const scaleCover = Math.max(cw / iw, ch / ih);
-        const scale = mode === 'cover' ? scaleCover : scaleContain;
+      // Update fit toggle state
+      const currentFit = uploads[currentIndex].fitMode || 'contain';
+      fitToggle.querySelectorAll('.fit-toggle-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.fit === currentFit);
+      });
 
-        const dw = iw * scale;
-        const dh = ih * scale;
-        const dx = (cw - dw) / 2;
-        const dy = (ch - dh) / 2;
+      // Nav buttons
+      prevBtn.style.visibility = currentIndex > 0 ? 'visible' : 'hidden';
+      nextBtn.style.visibility = currentIndex < uploads.length - 1 ? 'visible' : 'hidden';
 
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, cw, ch);
-        ctx.drawImage(img, dx, dy, dw, dh);
-      };
-      img.src = dataUrl;
+      // Dots
+      previewDots.innerHTML = '';
+      uploads.forEach((_, i) => {
+        const dot = document.createElement('span');
+        dot.className = 'preview-dot' + (i === currentIndex ? ' active' : '');
+        dot.addEventListener('click', () => { currentIndex = i; renderCarousel(); });
+        previewDots.appendChild(dot);
+      });
     }
 
+    function updateTrackPosition(offset) {
+      previewTrack.style.transform = `translateX(calc(-${currentIndex * 100}% + ${offset}px))`;
+    }
+
+    function goTo(index) {
+      currentIndex = Math.max(0, Math.min(uploads.length - 1, index));
+      renderCarousel();
+    }
+
+    // --- Swipe handling (mouse + touch) ---
+    const viewport = document.getElementById('previewViewport');
+
+    function onSwipeStart(x, y) {
+      if (uploads.length <= 1) return;
+      swiping = true;
+      swipeStartX = x;
+      swipeStartY = y;
+      swipeDx = 0;
+      previewTrack.style.transition = 'none';
+    }
+
+    function onSwipeMove(x, y) {
+      if (!swiping) return;
+      swipeDx = x - swipeStartX;
+      // Only horizontal swipe
+      if (Math.abs(swipeDx) > Math.abs(y - swipeStartY)) {
+        updateTrackPosition(swipeDx);
+      }
+    }
+
+    function onSwipeEnd() {
+      if (!swiping) return;
+      swiping = false;
+      previewTrack.style.transition = 'transform 0.3s ease';
+      const threshold = viewport.clientWidth * 0.15;
+      if (swipeDx < -threshold && currentIndex < uploads.length - 1) {
+        goTo(currentIndex + 1);
+      } else if (swipeDx > threshold && currentIndex > 0) {
+        goTo(currentIndex - 1);
+      } else {
+        updateTrackPosition(0);
+      }
+    }
+
+    // Mouse swipe
+    viewport.addEventListener('mousedown', e => {
+      if (e.target.closest('.preview-nav')) return;
+      onSwipeStart(e.clientX, e.clientY);
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => onSwipeMove(e.clientX, e.clientY));
+    document.addEventListener('mouseup', () => onSwipeEnd());
+
+    // Touch swipe
+    viewport.addEventListener('touchstart', e => {
+      if (e.target.closest('.preview-nav')) return;
+      const t = e.touches[0];
+      onSwipeStart(t.clientX, t.clientY);
+    }, { passive: true });
+    viewport.addEventListener('touchmove', e => {
+      const t = e.touches[0];
+      onSwipeMove(t.clientX, t.clientY);
+    }, { passive: true });
+    viewport.addEventListener('touchend', () => onSwipeEnd());
+
+    // Nav buttons
+    prevBtn.addEventListener('click', () => goTo(currentIndex - 1));
+    nextBtn.addEventListener('click', () => goTo(currentIndex + 1));
+
+    // --- Upload area events ---
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    uploadArea.addEventListener('dragover', e => {
+      e.preventDefault();
+      uploadArea.style.background = 'rgba(0, 0, 0, 0.05)';
+    });
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.background = '';
+    });
+    uploadArea.addEventListener('drop', async e => {
+      e.preventDefault();
+      uploadArea.style.background = '';
+      if (e.dataTransfer.files.length > 0) await addFiles(e.dataTransfer.files);
+    });
+
+    fileInput.addEventListener('change', async e => {
+      if (e.target.files.length > 0) await addFiles(e.target.files);
+      fileInput.value = '';
+    });
+
+    // --- Fit toggle (per-photo) ---
+    fitToggle.addEventListener('click', e => {
+      const btn = e.target.closest('.fit-toggle-btn');
+      if (!btn || uploads.length === 0) return;
+      uploads[currentIndex].fitMode = btn.dataset.fit;
+      renderCarousel();
+    });
+
+    // --- Clear current image ---
+    clearCurrentBtn.addEventListener('click', () => {
+      if (uploads.length === 0) return;
+      uploads.splice(currentIndex, 1);
+      if (currentIndex >= uploads.length) currentIndex = Math.max(0, uploads.length - 1);
+      renderCarousel();
+    });
+
+    // --- Save all to gallery ---
+    saveAllBtn.addEventListener('click', () => {
+      if (uploads.length === 0) return;
+      const photos = loadPhotos();
+      const album = loadCurrentAlbum();
+
+      uploads.forEach(u => {
+        photos.unshift({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          src: u.dataUrl,
+          name: u.name || 'Untitled',
+          album: album === 'all' ? null : album,
+          date: new Date().toISOString(),
+          size: u.size,
+          fitMode: u.fitMode || 'contain'
+        });
+      });
+
+      savePhotos(photos);
+      uploads = [];
+      currentIndex = 0;
+      renderCarousel();
+      renderRecent();
+    });
+
+    // --- Recent photos ---
     function renderRecent() {
       let photos = loadPhotos();
       photos = sortPhotos(photos, currentSortType);
@@ -171,79 +330,12 @@
           const id = item.dataset.id;
           const photo = loadPhotos().find(p => String(p.id) === id);
           if (!photo) return;
-          currentDataUrl = photo.src;
-          currentName = photo.name;
-          currentFileSize = photo.size || 0;
-          drawDataUrl(currentDataUrl);
+          uploads = [{ dataUrl: photo.src, name: photo.name, size: photo.size || 0, fitMode: photo.fitMode || 'contain' }];
+          currentIndex = 0;
+          renderCarousel();
         });
       });
     }
-
-    uploadArea.addEventListener('click', () => fileInput.click());
-
-    uploadArea.addEventListener('dragover', e => {
-      e.preventDefault();
-      uploadArea.style.background = 'rgba(0, 0, 0, 0.05)';
-    });
-
-    uploadArea.addEventListener('dragleave', () => {
-      uploadArea.style.background = '';
-    });
-
-    uploadArea.addEventListener('drop', async e => {
-      e.preventDefault();
-      uploadArea.style.background = '';
-      const file = e.dataTransfer.files && e.dataTransfer.files[0];
-      if (!file || !file.type.startsWith('image/')) return;
-
-      currentName = file.name;
-      currentFileSize = file.size;
-      currentDataUrl = await fileToDataURL(file);
-      drawDataUrl(currentDataUrl);
-    });
-
-    fileInput.addEventListener('change', async e => {
-      const file = e.target.files && e.target.files[0];
-      if (!file || !file.type.startsWith('image/')) return;
-
-      currentName = file.name;
-      currentFileSize = file.size;
-      currentDataUrl = await fileToDataURL(file);
-      drawDataUrl(currentDataUrl);
-      fileInput.value = '';
-    });
-
-    fitMode.addEventListener('change', () => drawDataUrl(currentDataUrl));
-
-    clearCanvas.addEventListener('click', () => {
-      currentDataUrl = '';
-      currentName = '';
-      clear();
-    });
-
-    saveToGalleryBtn.addEventListener('click', () => {
-      if (!currentDataUrl) return;
-      const photos = loadPhotos();
-      const album = loadCurrentAlbum();
-
-      const exportUrl = canvas.toDataURL('image/png');
-      if (!exportUrl) return;
-
-      const photo = {
-        id: Date.now() + Math.random(),
-        src: exportUrl,
-        name: currentName || 'Untitled',
-        album: album === 'all' ? null : album,
-        date: new Date().toISOString(),
-        size: currentFileSize
-      };
-
-      photos.unshift(photo);
-      savePhotos(photos);
-      renderRecent();
-    });
-
-    window.addEventListener('resize', () => drawDataUrl(currentDataUrl));
 
     recentSortSelect.addEventListener('change', (e) => {
       currentSortType = e.target.value;
@@ -251,7 +343,6 @@
     });
 
     setActiveNav();
-    clear();
     renderRecent();
   </script>
 </body>
