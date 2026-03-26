@@ -110,23 +110,38 @@ const STORAGE_KEYS = {
     localStorage.setItem(STORAGE_KEYS.photos, JSON.stringify(photos));
   }
 
-let staticPhotosCache = null;
-
-async function loadStaticPhotos() {
-  if (Array.isArray(staticPhotosCache)) return staticPhotosCache;
+async function loadJson(path) {
   try {
-    const res = await fetch('photos/manifest.json', { cache: 'no-cache' });
-    if (!res.ok) {
-      staticPhotosCache = [];
-      return staticPhotosCache;
-    }
-    const data = await res.json();
-    staticPhotosCache = Array.isArray(data) ? data : [];
-    return staticPhotosCache;
+    const res = await fetch(path, { cache: 'no-cache' });
+    if (!res.ok) return null;
+    return await res.json();
   } catch {
-    staticPhotosCache = [];
-    return staticPhotosCache;
+    return null;
   }
+}
+
+async function loadStaticGalleryPhotos() {
+  const data = await loadJson('photos/gallery.json');
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.photos)) return data.photos;
+  return [];
+}
+
+async function loadStaticAlbums() {
+  const data = await loadJson('photos/albums.json');
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.albums)) return data.albums;
+  return [];
+}
+
+async function loadStaticPortfolioItems() {
+  const data = await loadJson('photos/portfolio.json');
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.items)) return data.items;
+  return [];
 }
   
   function loadAlbums() {

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin</title>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="https://unpkg.com/netlify-cms-app/dist/netlify-cms-app.js"></script>
+  <script>
+    window.CMS_MANUAL_INIT = true;
+  </script>
+</head>
+<body>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const netlifyIdentity = window.netlifyIdentity;
+
+      if (!netlifyIdentity) {
+        window.CMS.init();
+        return;
+      }
+
+      netlifyIdentity.on('init', (user) => {
+        if (user) window.CMS.init();
+      });
+
+      netlifyIdentity.on('login', () => {
+        window.CMS.init();
+      });
+
+      netlifyIdentity.init();
+    });
+  </script>
+</body>
+</html>
+

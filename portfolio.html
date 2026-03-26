@@ -23,7 +23,7 @@
     <section>
       <div class="section-header">
         <h2>Portfolio</h2>
-        <p class="section-subtitle">Large, immersive frames curated from featured photos.</p>
+        <p class="section-subtitle">Your friend’s most memorable work.</p>
       </div>
 
       <div class="portfolio-grid" id="portfolioGrid"></div>
@@ -31,7 +31,7 @@
       <div class="empty-state" id="portfolioEmpty">
         <div class="empty-state-icon">🎨</div>
         <div class="empty-state-text">No portfolio items yet</div>
-        <div class="empty-state-hint">Add items to `photos/manifest.json` with "featured": true</div>
+        <div class="empty-state-hint">Ask your friend to upload portfolio images in Admin</div>
       </div>
     </section>
   </main>
@@ -39,10 +39,12 @@
   <!-- Portfolio Lightbox -->
   <div class="lightbox" id="portfolioLightbox">
     <button class="lightbox-close" id="portfolioLbClose">×</button>
+
     <div class="portfolio-lb-body">
       <div class="portfolio-lb-img-wrap">
         <img id="portfolioLbImg" src="" alt="">
       </div>
+
       <div class="portfolio-lb-info">
         <h3 id="portfolioLbTitle">—</h3>
         <p id="portfolioLbDesc" class="portfolio-lb-desc">—</p>
@@ -51,96 +53,94 @@
         </div>
       </div>
     </div>
+
+    <a class="lightbox-download-btn" id="portfolioLbDownloadBtn" href="#" download>Download</a>
   </div>
 
   <script src="common.js"></script>
   <script>
+    const topLoader = document.getElementById('topLoader');
+    function showLoader() { topLoader.classList.add('active'); }
+    function hideLoader() { topLoader.classList.remove('active'); }
+
     const portfolioGrid = document.getElementById('portfolioGrid');
     const portfolioEmpty = document.getElementById('portfolioEmpty');
     const portfolioLightbox = document.getElementById('portfolioLightbox');
-    let currentPortfolioItems = [];
-    let usesStaticPortfolio = false;
 
-    function loadPortfolio() {
-      const raw = localStorage.getItem(STORAGE_KEYS.portfolio);
-      return raw ? JSON.parse(raw) : [];
+    const portfolioLbImg = document.getElementById('portfolioLbImg');
+    const portfolioLbTitle = document.getElementById('portfolioLbTitle');
+    const portfolioLbDesc = document.getElementById('portfolioLbDesc');
+    const portfolioLbDate = document.getElementById('portfolioLbDate');
+    const portfolioLbDownloadBtn = document.getElementById('portfolioLbDownloadBtn');
+    const portfolioLbClose = document.getElementById('portfolioLbClose');
+
+    let portfolioItems = [];
+    let currentPortfolioIndex = 0;
+
+    function safeFilename(name) {
+      return String(name || 'portfolio-photo').trim().replace(/[\\/:*?"<>|]+/g, '-');
     }
-    function savePortfolio(items) {
-      localStorage.setItem(STORAGE_KEYS.portfolio, JSON.stringify(items));
+
+    function detectFormatFromSrc(src) {
+      const s = src ? String(src) : '';
+      const m = s.match(/\.([a-zA-Z0-9]+)(\?.*)?$/);
+      return m && m[1] ? m[1].toLowerCase() : null;
     }
 
     async function renderPortfolio() {
-      const staticPhotos = await loadStaticPhotos();
-      const staticFeatured = staticPhotos
-        .filter(item => item && item.featured)
-        .map(item => ({
-          thumbnail: item.src,
-          title: item.name || 'Untitled',
-          description: item.description || '',
-          createdAt: item.date || new Date().toISOString()
-        }));
-      usesStaticPortfolio = staticFeatured.length > 0;
-      const items = usesStaticPortfolio ? staticFeatured : loadPortfolio();
-      currentPortfolioItems = items;
+      showLoader();
+      portfolioItems = await loadStaticPortfolioItems();
 
-      if (items.length === 0) {
+      if (!portfolioItems || portfolioItems.length === 0) {
         portfolioGrid.style.display = 'none';
         portfolioEmpty.style.display = 'block';
+        hideLoader();
         return;
       }
+
+      portfolioItems = [...portfolioItems].sort((a, b) => (a.order || 0) - (b.order || 0));
 
       portfolioGrid.style.display = 'grid';
       portfolioEmpty.style.display = 'none';
 
-      portfolioGrid.innerHTML = items.map((item, index) => {
-        const truncTitle = (item.title || 'Untitled').length > 30
-          ? (item.title || 'Untitled').substring(0, 30) + '…'
-          : (item.title || 'Untitled');
-        const truncDesc = (item.description || '').length > 60
-          ? (item.description || '').substring(0, 60) + '…'
-          : (item.description || '');
-        return `
+      portfolioGrid.innerHTML = portfolioItems.map((item, index) => `
         <div class="portfolio-card" data-index="${index}" style="animation-delay:${Math.min(index * 0.05, 0.5)}s">
           <div class="portfolio-card-img">
-            <img src="${item.thumbnail}" alt="${item.title || ''}" loading="lazy">
-            ${usesStaticPortfolio ? '' : `<button class="portfolio-card-del" data-index="${index}" title="Remove">×</button>`}
+            <img src="${item.src}" alt="${item.title || ''}" loading="lazy">
           </div>
           <div class="portfolio-card-info">
-            <h3 class="portfolio-card-title">${truncTitle}</h3>
-            ${truncDesc ? `<p class="portfolio-card-desc">${truncDesc}</p>` : ''}
-            <span class="portfolio-card-date">${new Date(item.createdAt).toLocaleDateString()}</span>
+            <h3 class="portfolio-card-title">${(item.title || 'Untitled').length > 42 ? (item.title || 'Untitled').substring(0, 42) + '…' : item.title || 'Untitled'}</h3>
+            ${item.description ? `<p class="portfolio-card-desc">${item.description}</p>` : ''}
+            <span class="portfolio-card-date">${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</span>
           </div>
-        </div>`;
-      }).join('');
+        </div>
+      `).join('');
 
       portfolioGrid.querySelectorAll('.portfolio-card').forEach(card => {
-        card.addEventListener('click', e => {
-          if (e.target.classList.contains('portfolio-card-del')) return;
+        card.addEventListener('click', () => {
           const idx = parseInt(card.dataset.index, 10);
           openPortfolioLightbox(idx);
         });
       });
 
-      portfolioGrid.querySelectorAll('.portfolio-card-del').forEach(btn => {
-        btn.addEventListener('click', e => {
-          e.stopPropagation();
-          const idx = parseInt(btn.dataset.index, 10);
-          const items = loadPortfolio();
-          items.splice(idx, 1);
-          savePortfolio(items);
-          renderPortfolio();
-        });
-      });
+      hideLoader();
     }
 
     function openPortfolioLightbox(index) {
-      const items = currentPortfolioItems;
-      const item = items[index];
+      currentPortfolioIndex = index;
+      const item = portfolioItems[currentPortfolioIndex];
       if (!item) return;
-      document.getElementById('portfolioLbImg').src = item.thumbnail;
-      document.getElementById('portfolioLbTitle').textContent = item.title || 'Untitled';
-      document.getElementById('portfolioLbDesc').textContent = item.description || '';
-      document.getElementById('portfolioLbDate').textContent = new Date(item.createdAt).toLocaleDateString();
+
+      portfolioLbImg.src = item.src;
+      portfolioLbTitle.textContent = item.title || 'Untitled';
+      portfolioLbDesc.textContent = item.description || '';
+      portfolioLbDate.textContent = item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '—';
+
+      portfolioLbDownloadBtn.href = item.src;
+      const fmt = detectFormatFromSrc(item.src);
+      const dlName = `${safeFilename(item.title || 'portfolio-photo')}${fmt ? '.' + fmt : ''}`;
+      portfolioLbDownloadBtn.setAttribute('download', dlName);
+
       portfolioLightbox.classList.add('active');
       document.body.style.overflow = 'hidden';
     }
@@ -150,10 +150,8 @@
       document.body.style.overflow = '';
     }
 
-    document.getElementById('portfolioLbClose').addEventListener('click', closePortfolioLightbox);
-    portfolioLightbox.addEventListener('click', e => {
-      if (e.target === portfolioLightbox) closePortfolioLightbox();
-    });
+    portfolioLbClose.addEventListener('click', closePortfolioLightbox);
+    portfolioLightbox.addEventListener('click', e => { if (e.target === portfolioLightbox) closePortfolioLightbox(); });
 
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && portfolioLightbox.classList.contains('active')) closePortfolioLightbox();
@@ -164,3 +162,4 @@
   </script>
 </body>
 </html>
+
