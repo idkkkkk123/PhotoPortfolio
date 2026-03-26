@@ -1,4 +1,5 @@
 [build]
+  command = "node scripts/build-data.js"
   publish = "."
 
 # HTML pages — revalidate

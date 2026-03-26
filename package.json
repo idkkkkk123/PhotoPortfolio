@@ -1,13 +1,13 @@
 {
-  "name": "photo-portfolio",
+  "name": "photo-web",
   "version": "1.0.0",
-  "description": "Photography portfolio website",
-  "main": "index.html",
+  "description": "Static photography portfolio",
+  "main": "common.js",
   "scripts": {
-    "start": "python -m http.server 8080",
-    "build": "echo 'No build step needed - static site'"
+    "build": "node scripts/build-data.js",
+    "test": "echo \"No tests\" && exit 0"
   },
-  "keywords": ["photography", "portfolio", "static-site"],
-  "author": "Photography Portfolio",
-  "license": "MIT"
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

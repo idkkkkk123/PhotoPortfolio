@@ -8,22 +8,17 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Top loading bar -->
   <div class="top-loader" id="topLoader"></div>
 
-  <!-- Navigation -->
   <nav class="nav glass">
     <div class="nav-container">
       <a class="nav-btn" href="index.html">Home</a>
-      <a class="nav-btn active" href="gallery.html">Gallery</a>
+      <a class="nav-btn" href="gallery.html">Gallery</a>
       <a class="nav-btn" href="albums.html">Albums</a>
-      <a class="nav-btn" href="portfolio.html">Portfolio</a>
     </div>
   </nav>
 
-  <!-- Main Content -->
   <main class="container page-main">
-    <!-- Gallery Section -->
     <section id="gallery">
       <div class="section-header">
         <h2>Gallery</h2>
@@ -31,10 +26,6 @@
       <div class="filter-controls">
         <label for="gallerySortSelect">Sort by:</label>
         <select id="gallerySortSelect">
-          <option value="newest">Newest First</option>
-          <option value="oldest">Oldest First</option>
-          <option value="sizeDesc">Largest File</option>
-          <option value="sizeAsc">Smallest File</option>
           <option value="nameAsc">A to Z</option>
           <option value="nameDesc">Z to A</option>
         </select>
@@ -43,12 +34,11 @@
       <div class="empty-state" id="emptyState">
         <div class="empty-state-icon">📸</div>
         <div class="empty-state-text">No photos yet</div>
-        <div class="empty-state-hint">Check back later for new photos</div>
+        <div class="empty-state-hint">Add images to the <code>images</code> folder and run <code>node scripts/build-data.js</code></div>
       </div>
     </section>
   </main>
 
-  <!-- Lightbox -->
   <div class="lightbox" id="lightbox">
     <button class="lightbox-close" id="lightboxClose">×</button>
     <button class="lightbox-nav lightbox-prev" id="lightboxPrev">‹</button>
@@ -61,9 +51,7 @@
         <div class="lightbox-info-row"><span class="lightbox-info-label">Filename</span><span class="lightbox-info-val" id="lbInfoName">—</span></div>
         <div class="lightbox-info-row"><span class="lightbox-info-label">Resolution</span><span class="lightbox-info-val" id="lbInfoRes">—</span></div>
         <div class="lightbox-info-row"><span class="lightbox-info-label">Aspect Ratio</span><span class="lightbox-info-val" id="lbInfoAspect">—</span></div>
-        <div class="lightbox-info-row"><span class="lightbox-info-label">File Size</span><span class="lightbox-info-val" id="lbInfoSize">—</span></div>
         <div class="lightbox-info-row"><span class="lightbox-info-label">Format</span><span class="lightbox-info-val" id="lbInfoFormat">—</span></div>
-        <div class="lightbox-info-row"><span class="lightbox-info-label">Uploaded</span><span class="lightbox-info-val" id="lbInfoDate">—</span></div>
       </div>
     </div>
     <button class="lightbox-info-btn" id="lightboxInfoBtn" title="Toggle Info">
@@ -76,36 +64,34 @@
 
   <script src="common.js"></script>
   <script>
-    // --- Loading bar ---
-    const topLoader = document.getElementById('topLoader');
+    var topLoader = document.getElementById('topLoader');
     function showLoader() { topLoader.classList.add('active'); }
     function hideLoader() { topLoader.classList.remove('active'); }
 
-    let photos = [];
-    let currentSortType = 'newest';
-    let currentLightboxIndex = 0;
-    let currentPhotoList = [];
-    let isZoomMode = false;
-    let zoomLevel = 1;
-    let panX = 0, panY = 0, isPanning = false, panStartX = 0, panStartY = 0;
+    var photos = [];
+    var currentSortType = 'nameAsc';
+    var currentLightboxIndex = 0;
+    var currentPhotoList = [];
+    var isZoomMode = false;
+    var zoomLevel = 1;
+    var panX = 0, panY = 0, isPanning = false, panStartX = 0, panStartY = 0;
 
-    const galleryGrid = document.getElementById('galleryGrid');
-    const emptyState = document.getElementById('emptyState');
-    const lightbox = document.getElementById('lightbox');
-    const lightboxImg = document.getElementById('lightboxImg');
-    const lightboxImgWrap = document.getElementById('lightboxImgWrap');
-    const lightboxClose = document.getElementById('lightboxClose');
-    const lightboxPrev = document.getElementById('lightboxPrev');
-    const lightboxNext = document.getElementById('lightboxNext');
-    const lightboxInfoBtn = document.getElementById('lightboxInfoBtn');
-    const lightboxInfo = document.getElementById('lightboxInfo');
-    const lightboxZoomBtn = document.getElementById('lightboxZoomBtn');
-    const gallerySortSelect = document.getElementById('gallerySortSelect');
+    var galleryGrid = document.getElementById('galleryGrid');
+    var emptyState = document.getElementById('emptyState');
+    var lightbox = document.getElementById('lightbox');
+    var lightboxImg = document.getElementById('lightboxImg');
+    var lightboxImgWrap = document.getElementById('lightboxImgWrap');
+    var lightboxClose = document.getElementById('lightboxClose');
+    var lightboxPrev = document.getElementById('lightboxPrev');
+    var lightboxNext = document.getElementById('lightboxNext');
+    var lightboxInfoBtn = document.getElementById('lightboxInfoBtn');
+    var lightboxInfo = document.getElementById('lightboxInfo');
+    var lightboxZoomBtn = document.getElementById('lightboxZoomBtn');
+    var gallerySortSelect = document.getElementById('gallerySortSelect');
 
     function renderGallery() {
       showLoader();
-      photos = loadPhotos();
-      let filteredPhotos = sortPhotos(photos, currentSortType);
+      var filteredPhotos = sortPhotos(photos, currentSortType);
 
       if (filteredPhotos.length === 0) {
         galleryGrid.style.display = 'none';
@@ -117,42 +103,23 @@
       galleryGrid.style.display = 'grid';
       emptyState.style.display = 'none';
 
-      galleryGrid.innerHTML = filteredPhotos.map((photo, index) => {
-        const truncName = (photo.name || 'Untitled').length > 22
-          ? (photo.name || 'Untitled').substring(0, 22) + '…'
-          : (photo.name || 'Untitled');
-        return `
-        <div class="gallery-item" style="animation-delay: ${Math.min(index * 0.03, 0.6)}s" data-index="${index}">
-          <img src="${photo.src}" alt="${photo.name}" loading="lazy">
-          <button class="delete-btn" data-id="${photo.id}" title="Delete">×</button>
-          <div class="gallery-item-name">${truncName}</div>
-        </div>`;
+      galleryGrid.innerHTML = filteredPhotos.map(function(photo, index) {
+        var name = photo.name || 'Photo';
+        var truncName = name.length > 22 ? name.substring(0, 22) + '…' : name;
+        return '<div class="gallery-item" style="animation-delay: ' + Math.min(index * 0.03, 0.6) + 's" data-index="' + index + '">' +
+          '<img src="' + photo.src + '" alt="' + (photo.name || '') + '" loading="lazy">' +
+          '<div class="gallery-item-name">' + truncName + '</div></div>';
       }).join('');
 
-      document.querySelectorAll('.gallery-item').forEach(item => {
-        item.addEventListener('click', e => {
-          if (!e.target.classList.contains('delete-btn')) {
-            const index = parseInt(item.dataset.index, 10);
-            openLightbox(index, filteredPhotos);
-          }
+      galleryGrid.querySelectorAll('.gallery-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+          var index = parseInt(item.dataset.index, 10);
+          openLightbox(index, filteredPhotos);
         });
       });
-
-      document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-          e.stopPropagation();
-          const id = btn.dataset.id;
-          const next = loadPhotos().filter(p => String(p.id) !== id);
-          savePhotos(next);
-          photos = next;
-          renderGallery();
-        });
-      });
-
       hideLoader();
     }
 
-    // --- Lightbox ---
     function openLightbox(index, photoList) {
       currentLightboxIndex = index;
       currentPhotoList = photoList;
@@ -163,44 +130,20 @@
     }
 
     function updateLightboxContent() {
-      const photo = currentPhotoList[currentLightboxIndex];
+      var photo = currentPhotoList[currentLightboxIndex];
       if (!photo) return;
       lightboxImg.src = photo.src;
-
-      // Info panel
-      document.getElementById('lbInfoName').textContent = photo.name || 'Untitled';
-      document.getElementById('lbInfoSize').textContent = photo.size ? formatFileSize(photo.size) : '—';
-      document.getElementById('lbInfoDate').textContent = photo.date ? new Date(photo.date).toLocaleDateString() : '—';
-
-      // Detect format from data URL or name
-      let fmt = '—';
-      if (photo.src) {
-        const m = photo.src.match(/^data:image\/(\w+)/);
-        if (m) fmt = m[1].toUpperCase();
-      }
-      if (fmt === '—' && photo.name) {
-        const ext = photo.name.split('.').pop();
-        if (ext) fmt = ext.toUpperCase();
-      }
-      document.getElementById('lbInfoFormat').textContent = fmt;
-
-      // Resolution & aspect ratio (need image load)
-      const tmpImg = new Image();
-      tmpImg.onload = () => {
-        const w = tmpImg.naturalWidth, h = tmpImg.naturalHeight;
-        document.getElementById('lbInfoRes').textContent = `${w} × ${h}`;
-        const g = gcd(w, h);
-        document.getElementById('lbInfoAspect').textContent = `${w/g}:${h/g}`;
+      document.getElementById('lbInfoName').textContent = photo.name || '—';
+      var ext = (photo.name || '').split('.').pop();
+      document.getElementById('lbInfoFormat').textContent = ext ? ext.toUpperCase() : '—';
+      var tmpImg = new Image();
+      tmpImg.onload = function() {
+        var w = tmpImg.naturalWidth, h = tmpImg.naturalHeight;
+        document.getElementById('lbInfoRes').textContent = w + ' × ' + h;
+        var g = gcd(w, h);
+        document.getElementById('lbInfoAspect').textContent = (w/g) + ':' + (h/g);
       };
       tmpImg.src = photo.src;
-    }
-
-    function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
-
-    function formatFileSize(bytes) {
-      if (bytes < 1024) return bytes + ' B';
-      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-      return (bytes / 1048576).toFixed(1) + ' MB';
     }
 
     function closeLightbox() {
@@ -210,35 +153,27 @@
     }
 
     lightboxClose.addEventListener('click', closeLightbox);
-
-    lightboxPrev.addEventListener('click', () => {
+    lightboxPrev.addEventListener('click', function() {
       currentLightboxIndex = (currentLightboxIndex - 1 + currentPhotoList.length) % currentPhotoList.length;
       updateLightboxContent();
       exitZoom();
     });
-
-    lightboxNext.addEventListener('click', () => {
+    lightboxNext.addEventListener('click', function() {
       currentLightboxIndex = (currentLightboxIndex + 1) % currentPhotoList.length;
       updateLightboxContent();
       exitZoom();
     });
+    lightbox.addEventListener('click', function(e) { if (e.target === lightbox) closeLightbox(); });
 
-    lightbox.addEventListener('click', e => {
-      if (e.target === lightbox) closeLightbox();
-    });
-
-    // --- Info toggle ---
-    lightboxInfoBtn.addEventListener('click', () => {
-      const showing = lightboxInfo.style.display !== 'none';
+    lightboxInfoBtn.addEventListener('click', function() {
+      var showing = lightboxInfo.style.display !== 'none';
       lightboxInfo.style.display = showing ? 'none' : '';
       lightboxInfoBtn.classList.toggle('active', !showing);
     });
 
-    // --- Zoom / Magnifier ---
-    lightboxZoomBtn.addEventListener('click', () => {
-      if (isZoomMode) { exitZoom(); } else { enterZoom(); }
+    lightboxZoomBtn.addEventListener('click', function() {
+      if (isZoomMode) exitZoom(); else enterZoom();
     });
-
     function enterZoom() {
       isZoomMode = true;
       zoomLevel = 2;
@@ -247,7 +182,6 @@
       lightboxZoomBtn.classList.add('active');
       applyZoomTransform();
     }
-
     function exitZoom() {
       isZoomMode = false;
       zoomLevel = 1;
@@ -256,29 +190,24 @@
       lightboxZoomBtn.classList.remove('active');
       lightboxImg.style.transform = '';
     }
-
     function applyZoomTransform() {
-      lightboxImg.style.transform = `scale(${zoomLevel}) translate(${panX}px, ${panY}px)`;
+      lightboxImg.style.transform = 'scale(' + zoomLevel + ') translate(' + panX + 'px, ' + panY + 'px)';
     }
-
-    lightboxImgWrap.addEventListener('mousedown', e => {
+    lightboxImgWrap.addEventListener('mousedown', function(e) {
       if (!isZoomMode) return;
       isPanning = true;
       panStartX = e.clientX - panX * zoomLevel;
       panStartY = e.clientY - panY * zoomLevel;
       e.preventDefault();
     });
-
-    document.addEventListener('mousemove', e => {
+    document.addEventListener('mousemove', function(e) {
       if (!isPanning || !isZoomMode) return;
       panX = (e.clientX - panStartX) / zoomLevel;
       panY = (e.clientY - panStartY) / zoomLevel;
       applyZoomTransform();
     });
-
-    document.addEventListener('mouseup', () => { isPanning = false; });
-
-    lightboxImgWrap.addEventListener('wheel', e => {
+    document.addEventListener('mouseup', function() { isPanning = false; });
+    lightboxImgWrap.addEventListener('wheel', function(e) {
       if (!isZoomMode) return;
       e.preventDefault();
       zoomLevel = Math.min(6, Math.max(1, zoomLevel + (e.deltaY > 0 ? -0.3 : 0.3)));
@@ -286,21 +215,32 @@
       applyZoomTransform();
     }, { passive: false });
 
-    // --- Keyboard ---
-    document.addEventListener('keydown', e => {
+    document.addEventListener('keydown', function(e) {
       if (!lightbox.classList.contains('active')) return;
       if (e.key === 'Escape') closeLightbox();
       else if (e.key === 'ArrowLeft') lightboxPrev.click();
       else if (e.key === 'ArrowRight') lightboxNext.click();
     });
 
-    gallerySortSelect.addEventListener('change', (e) => {
+    gallerySortSelect.addEventListener('change', function(e) {
       currentSortType = e.target.value;
       renderGallery();
     });
 
     setActiveNav();
-    renderGallery();
+
+    fetch('data/gallery.json')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        photos = (data.images || []).map(function(img) {
+          return { src: img.src, name: img.name || img.src.split('/').pop() };
+        });
+        renderGallery();
+      })
+      .catch(function() {
+        photos = [];
+        renderGallery();
+      });
   </script>
 </body>
 </html>
