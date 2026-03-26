@@ -293,51 +293,64 @@
       console.log('Add photo form data:', { title, category, description, file: fileInput.files[0] });
       
       if (fileInput.files.length > 0) {
-        // Create FormData for real file upload
-        const formData = new FormData();
-        formData.append('files[0]', fileInput.files[0]);
+        const file = fileInput.files[0];
         
-        console.log('FormData created for single file upload');
-        
-        fetch('/.netlify/functions/upload', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => {
-          console.log('Single file upload response status:', response.status);
-          return response.json();
-        })
-        .then(uploadResult => {
-          console.log('Single file upload result:', uploadResult);
+        // Read file as base64 and send as JSON
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64Data = e.target.result;
           
-          if (uploadResult.success) {
-            const newPhoto = {
-              id: uploadResult.files[0].id,
-              title: title,
-              category: category,
-              description: description,
-              image: uploadResult.files[0].src,
-              name: fileInput.files[0].name
-            };
-            
-            console.log('New photo to add:', newPhoto);
-            
-            photos.push(newPhoto);
-            
-            // Save to server data file
-            fetch('/.netlify/functions/save-photos', {
+          const fileData = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            name: file.name,
+            dataUrl: base64Data,
+            size: file.size,
+            type: file.type
+          };
+          
+          console.log('File converted to base64:', fileData);
+          
+          try {
+            const uploadResponse = await fetch('/.netlify/functions/upload', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify(photos)
-            })
-            .then(response => {
-              console.log('Save response status:', response.status);
-              return response.json();
-            })
-            .then(data => {
-              console.log('Save result:', data);
+              body: JSON.stringify({ files: [fileData] })
+            });
+            
+            console.log('Single file upload response status:', uploadResponse.status);
+            
+            const uploadResult = await uploadResponse.json();
+            console.log('Single file upload result:', uploadResult);
+            
+            if (uploadResult.success) {
+              const newPhoto = {
+                id: uploadResult.files[0].id,
+                title: title,
+                category: category,
+                description: description,
+                image: uploadResult.files[0].src,
+                name: file.name
+              };
+              
+              console.log('New photo to add:', newPhoto);
+              
+              photos.push(newPhoto);
+              
+              // Save to server data file
+              const saveResponse = await fetch('/.netlify/functions/save-photos', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(photos)
+              });
+              
+              console.log('Save response status:', saveResponse.status);
+              
+              const saveResult = await saveResponse.json();
+              console.log('Save result:', saveResult);
               
               // Always save to localStorage for immediate display
               localStorage.setItem('galleryPhotos', JSON.stringify(photos));
@@ -347,38 +360,21 @@
               document.getElementById('addPhotoModal').style.display = 'none';
               
               renderGallery();
-            })
-            .catch(error => {
-              console.error('Save error:', error);
-              alert('Failed to save photo: ' + error.message);
-              
-              // Fallback: save to localStorage
-              localStorage.setItem('galleryPhotos', JSON.stringify(photos));
-              
-              // Reset form and close modal
-              document.getElementById('addPhotoForm').reset();
-              document.getElementById('addPhotoModal').style.display = 'none';
-              
-              renderGallery();
-            });
-          } else {
-            throw new Error(uploadResult.error || 'Failed to upload photo');
-          }
-        })
-        .catch(error => {
-          console.error('Upload error:', error);
-          alert('Failed to upload photo: ' + error.message);
-          
-          // Fallback: use FileReader for local storage
-          const reader = new FileReader();
-          reader.onload = (e) => {
+            } else {
+              throw new Error(uploadResult.error || 'Failed to upload photo');
+            }
+          } catch (error) {
+            console.error('Upload error:', error);
+            alert('Failed to upload photo: ' + error.message);
+            
+            // Fallback: save directly to localStorage
             const newPhoto = {
               id: Date.now().toString(),
               title: title,
               category: category,
               description: description,
-              image: e.target.result,
-              name: fileInput.files[0].name
+              image: base64Data,
+              name: file.name
             };
             
             photos.push(newPhoto);
@@ -389,9 +385,15 @@
             document.getElementById('addPhotoModal').style.display = 'none';
             
             renderGallery();
-          };
-          reader.readAsDataURL(fileInput.files[0]);
-        });
+          }
+        };
+        
+        reader.onerror = (error) => {
+          console.error('FileReader error:', error);
+          alert('Failed to read file: ' + error.message);
+        };
+        
+        reader.readAsDataURL(file);
       }
     }
 

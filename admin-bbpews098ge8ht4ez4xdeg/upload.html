@@ -234,18 +234,39 @@
       saveAllBtn.textContent = 'Saving...';
 
       try {
-        // Create FormData for real file upload
-        const formData = new FormData();
-        uploads.forEach((upload, index) => {
-          console.log('Adding file to FormData:', upload.name, upload.file.size, upload.file.type);
-          formData.append(`files[${index}]`, upload.file);
-        });
-
-        console.log('FormData entries:', formData);
+        // Convert files to base64 and send as JSON
+        const filesData = [];
         
+        for (let i = 0; i < uploads.length; i++) {
+          const upload = uploads[i];
+          console.log('Processing file:', upload.name, upload.file.size, upload.file.type);
+          
+          // Read file as base64
+          const base64Data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(upload.file);
+          });
+          
+          filesData.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            name: upload.name,
+            dataUrl: base64Data,
+            size: upload.file.size,
+            type: upload.file.type
+          });
+        }
+        
+        console.log('Files converted to base64:', filesData.length);
+        
+        // Send as JSON instead of FormData
         const uploadResponse = await fetch('/.netlify/functions/upload', {
           method: 'POST',
-          body: formData
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ files: filesData })
         });
 
         console.log('Upload response status:', uploadResponse.status);

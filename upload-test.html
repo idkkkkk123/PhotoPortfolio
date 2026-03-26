@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+    .result { margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; }
+    .error { color: red; }
+    .success { color: green; }
+  </style>
+</head>
+<body>
+  <h1>Upload Test - Debugging</h1>
+  
+  <div class="test-section">
+    <h2>1. Test FormData Creation</h2>
+    <input type="file" id="fileInput" accept="image/*" multiple>
+    <button onclick="testFormData()">Test FormData</button>
+    <div id="formResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Test Direct Upload</h2>
+    <button onclick="testDirectUpload()">Test Direct Upload</button>
+    <div id="directResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Test Server Response</h2>
+    <button onclick="testServerResponse()">Test Server</button>
+    <div id="serverResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Test localStorage</h2>
+    <button onclick="testLocalStorage()">Test localStorage</button>
+    <div id="localStorageResult" class="result"></div>
+  </div>
+
+  <script>
+    function testFormData() {
+      const fileInput = document.getElementById('fileInput');
+      const files = fileInput.files;
+      
+      if (files.length === 0) {
+        document.getElementById('formResult').innerHTML = '<span class="error">No files selected</span>';
+        return;
+      }
+
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append(`files[${i}]`, files[i]);
+        console.log(`Added file ${i}:`, files[i].name, files[i].size, files[i].type);
+      }
+
+      console.log('FormData entries count:', formData.entries().length);
+      
+      document.getElementById('formResult').innerHTML = `
+        <span class="success">FormData created with ${files.length} files</span><br>
+        Files: ${Array.from(files).map(f => f.name).join(', ')}<br>
+        Total size: ${Array.from(files).reduce((sum, f) => sum + f.size, 0)} bytes
+      `;
+    }
+
+    async function testDirectUpload() {
+      const fileInput = document.getElementById('fileInput');
+      const files = fileInput.files;
+      
+      if (files.length === 0) {
+        document.getElementById('directResult').innerHTML = '<span class="error">No files selected</span>';
+        return;
+      }
+
+      // Convert files to base64 and send as JSON
+      const filesData = [];
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const base64Data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        
+        filesData.push({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          name: file.name,
+          dataUrl: base64Data,
+          size: file.size,
+          type: file.type
+        });
+      }
+
+      try {
+        const response = await fetch('/.netlify/functions/upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ files: filesData })
+        });
+
+        const result = await response.json();
+        
+        console.log('Direct upload result:', result);
+        
+        document.getElementById('directResult').innerHTML = `
+          <span class="success">Upload completed</span><br>
+          Status: ${response.status}<br>
+          Success: ${result.success}<br>
+          Files returned: ${result.files ? result.files.length : 0}<br>
+          ${result.files ? result.files.map(f => `File: ${f.name}, Size: ${f.size}`).join('<br>') : ''}
+        `;
+      } catch (error) {
+        console.error('Direct upload error:', error);
+        document.getElementById('directResult').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+      }
+    }
+
+    async function testServerResponse() {
+      try {
+        const response = await fetch('/.netlify/functions/load-photos');
+        const result = await response.json();
+        
+        console.log('Server response:', result);
+        
+        document.getElementById('serverResult').innerHTML = `
+          <span class="success">Server response received</span><br>
+          Status: ${response.status}<br>
+          Success: ${result.success}<br>
+          Photos count: ${result.photos ? result.photos.length : 0}<br>
+          ${result.photos ? result.photos.slice(0, 3).map(p => `Photo: ${p.title || p.name}, ID: ${p.id}`).join('<br>') : ''}
+        `;
+      } catch (error) {
+        console.error('Server response error:', error);
+        document.getElementById('serverResult').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+      }
+    }
+
+    function testLocalStorage() {
+      const photos = JSON.parse(localStorage.getItem('galleryPhotos') || '[]');
+      
+      console.log('localStorage photos:', photos);
+      
+      document.getElementById('localStorageResult').innerHTML = `
+        <span class="success">localStorage photos: ${photos.length}</span><br>
+        ${photos.slice(0, 3).map(p => `Photo: ${p.title || p.name}, Image: ${p.image ? 'YES' : 'NO'}`).join('<br>')}
+      `;
+    }
+  </script>
+</body>
+</html>
