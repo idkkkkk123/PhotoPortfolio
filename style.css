@@ -632,19 +632,21 @@ button:active,
 /* Gallery Grid */
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.4rem;
   margin-top: 3rem;
 }
 
 .gallery-item {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 5;
   overflow: visible;
-  border-radius: 16px;
+  border-radius: 18px;
   cursor: pointer;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
   animation: galleryItemIn 0.4s ease-out both;
+  background: linear-gradient(180deg, #f7f7f7 0%, #ececec 100%);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
 }
 
 @keyframes fadeIn {
@@ -679,7 +681,7 @@ button:active,
   height: 100%;
   object-fit: cover;
   transition: transform 0.25s ease;
-  border-radius: 16px;
+  border-radius: 18px;
   display: block;
 }
 
@@ -865,7 +867,7 @@ button:active,
 .lightbox-info-btn {
   position: fixed;
   bottom: 2rem;
-  right: 5.5rem;
+  right: 10rem;
   background: rgba(255,255,255,0.15);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255,255,255,0.2);
@@ -879,6 +881,33 @@ button:active,
   justify-content: center;
   transition: all 0.2s ease;
   z-index: 2001;
+}
+
+.lightbox-download-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 5.5rem;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  height: 44px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 2001;
+  text-decoration: none;
+  padding: 0 0.95rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.lightbox-download-btn:hover {
+  background: rgba(255,255,255,0.25);
 }
 
 .lightbox-info-btn:hover {
@@ -1918,7 +1947,7 @@ button:active,
 
 .album-card-image {
   position: relative;
-  aspect-ratio: 16/9;
+  aspect-ratio: 4 / 3;
   overflow: visible;
   background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
   border-radius: 18px 18px 0 0;
@@ -2364,7 +2393,7 @@ button:active,
   font-weight: 600;
 }
 
-/* de-tb-btn used in albums viewer - import from display-editor.css inline */
+/* de-tb-btn used in albums viewer */
 .de-tb-btn {
   padding: 0.4rem 0.85rem;
   background: #f4f4f5;
@@ -2536,8 +2565,8 @@ button.cta-button:hover {
    ===================================================== */
 .portfolio-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 1.75rem;
   margin-top: 2rem;
 }
 
@@ -2559,7 +2588,7 @@ button.cta-button:hover {
 
 .portfolio-card-img {
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 11;
   overflow: hidden;
   border-radius: 16px 16px 0 0;
 }
@@ -2569,11 +2598,11 @@ button.cta-button:hover {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.3s ease;
+  transition: transform 0.45s ease;
 }
 
 .portfolio-card:hover .portfolio-card-img img {
-  transform: scale(1.03);
+  transform: scale(1.07);
 }
 
 .portfolio-card-del {
@@ -3396,13 +3425,20 @@ button.cta-button:hover {
   }
 
   .lightbox-info-btn,
+  .lightbox-download-btn,
   .lightbox-zoom-btn {
     width: 40px;
     height: 40px;
     bottom: 1rem;
   }
 
-  .lightbox-info-btn { right: 4rem; }
+  .lightbox-info-btn { right: 7rem; }
+  .lightbox-download-btn {
+    right: 4rem;
+    width: auto;
+    padding: 0 0.7rem;
+    font-size: 0.68rem;
+  }
   .lightbox-zoom-btn { right: 1rem; }
 
   /* --- Albums --- */

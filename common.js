@@ -2,8 +2,6 @@ const STORAGE_KEYS = {
     photos: 'portfolioPhotos',
     albums: 'portfolioAlbums',
     currentAlbum: 'portfolioCurrentAlbum',
-    displays: 'portfolioDisplays',
-    currentDisplay: 'portfolioCurrentDisplay',
     savedAlbums: 'portfolioSavedAlbums',
     portfolio: 'portfolioItems',
     tutorialDone: 'portfolioTutorialDone'
@@ -17,10 +15,6 @@ const STORAGE_KEYS = {
     async savePhoto(photo) { throw new Error('Not implemented'); }
     async deletePhoto(id) { throw new Error('Not implemented'); }
 
-    async getDisplays() { throw new Error('Not implemented'); }
-    async saveDisplay(display) { throw new Error('Not implemented'); }
-    async deleteDisplay(id) { throw new Error('Not implemented'); }
-
     async getAlbums() { throw new Error('Not implemented'); }
     async saveAlbum(album) { throw new Error('Not implemented'); }
     async deleteAlbum(id) { throw new Error('Not implemented'); }
@@ -28,8 +22,6 @@ const STORAGE_KEYS = {
     async getCurrentAlbum() { throw new Error('Not implemented'); }
     async setCurrentAlbum(id) { throw new Error('Not implemented'); }
 
-    async getCurrentDisplay() { throw new Error('Not implemented'); }
-    async setCurrentDisplay(id) { throw new Error('Not implemented'); }
   }
 
   // =====================================================
@@ -66,30 +58,6 @@ const STORAGE_KEYS = {
       return filtered;
     }
 
-    async getDisplays() {
-      const raw = localStorage.getItem(STORAGE_KEYS.displays);
-      return raw ? JSON.parse(raw) : [];
-    }
-
-    async saveDisplay(display) {
-      const displays = await this.getDisplays();
-      const index = displays.findIndex(d => d.id === display.id);
-      if (index !== -1) {
-        displays[index] = display;
-      } else {
-        displays.push(display);
-      }
-      localStorage.setItem(STORAGE_KEYS.displays, JSON.stringify(displays));
-      return display;
-    }
-
-    async deleteDisplay(id) {
-      const displays = await this.getDisplays();
-      const filtered = displays.filter(d => d.id !== id);
-      localStorage.setItem(STORAGE_KEYS.displays, JSON.stringify(filtered));
-      return filtered;
-    }
-
     async getAlbums() {
       const raw = localStorage.getItem(STORAGE_KEYS.savedAlbums);
       return raw ? JSON.parse(raw) : [];
@@ -122,17 +90,6 @@ const STORAGE_KEYS = {
       localStorage.setItem(STORAGE_KEYS.currentAlbum, id);
     }
 
-    async getCurrentDisplay() {
-      return localStorage.getItem(STORAGE_KEYS.currentDisplay) || null;
-    }
-
-    async setCurrentDisplay(id) {
-      if (id) {
-        localStorage.setItem(STORAGE_KEYS.currentDisplay, id);
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.currentDisplay);
-      }
-    }
   }
 
   // Initialize storage service.
@@ -152,6 +109,25 @@ const STORAGE_KEYS = {
   function savePhotos(photos) {
     localStorage.setItem(STORAGE_KEYS.photos, JSON.stringify(photos));
   }
+
+let staticPhotosCache = null;
+
+async function loadStaticPhotos() {
+  if (Array.isArray(staticPhotosCache)) return staticPhotosCache;
+  try {
+    const res = await fetch('photos/manifest.json', { cache: 'no-cache' });
+    if (!res.ok) {
+      staticPhotosCache = [];
+      return staticPhotosCache;
+    }
+    const data = await res.json();
+    staticPhotosCache = Array.isArray(data) ? data : [];
+    return staticPhotosCache;
+  } catch {
+    staticPhotosCache = [];
+    return staticPhotosCache;
+  }
+}
   
   function loadAlbums() {
     const raw = localStorage.getItem(STORAGE_KEYS.albums);
@@ -197,80 +173,6 @@ const STORAGE_KEYS = {
         link.classList.add('active');
       }
     });
-  }
-
-  function loadDisplays() {
-    const raw = localStorage.getItem(STORAGE_KEYS.displays);
-    if (!raw) return [];
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-
-  function saveDisplays(displays) {
-    localStorage.setItem(STORAGE_KEYS.displays, JSON.stringify(displays));
-  }
-
-  function loadCurrentDisplay() {
-    return localStorage.getItem(STORAGE_KEYS.currentDisplay) || null;
-  }
-
-  function saveCurrentDisplay(displayId) {
-    if (displayId) {
-      localStorage.setItem(STORAGE_KEYS.currentDisplay, displayId);
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.currentDisplay);
-    }
-  }
-
-  function getDefaultCanvasSize() {
-    const dpr = window.devicePixelRatio || 1;
-    const w = Math.round(window.screen.width * dpr);
-    const h = Math.round(window.screen.height * dpr);
-    return { width: Math.min(w, 3840), height: Math.min(h, 2160) };
-  }
-
-  function createNewDisplay(name) {
-    const displayId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-    const pageId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-    const size = getDefaultCanvasSize();
-
-    return {
-      id: displayId,
-      name: name || 'Untitled Collage',
-      pages: [
-        {
-          id: pageId,
-          pageNumber: 1,
-          width: size.width,
-          height: size.height,
-          background: '#ffffff',
-          items: [],
-          guides: []
-        }
-      ],
-      createdDate: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
-      exportedImage: null
-    };
-  }
-
-  function createNewPage() {
-    const pageId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-    const size = getDefaultCanvasSize();
-
-    return {
-      id: pageId,
-      pageNumber: 0,
-      width: size.width,
-      height: size.height,
-      background: '#ffffff',
-      items: [],
-      guides: []
-    };
   }
 
   // =====================================================

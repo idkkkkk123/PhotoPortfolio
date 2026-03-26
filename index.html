@@ -13,8 +13,6 @@
         <div class="nav-container">
             <a class="nav-btn" href="index.html">Home</a>
             <a class="nav-btn" href="gallery.html">Gallery</a>
-            <a class="nav-btn" href="upload.html">Upload</a>
-            <a class="nav-btn" href="display.html">Display</a>
             <a class="nav-btn" href="albums.html">Albums</a>
             <a class="nav-btn" href="portfolio.html">Portfolio</a>
         </div>
@@ -92,12 +90,10 @@
         // --- Tutorial / Guide (first visit only) ---
         const tourSteps = [
           { target: '.hero-content h1', title: 'Welcome', text: 'A quick tour of your photography workspace. Only shows once.' },
-          { target: '.nav-btn[href="upload.html"]', title: 'Upload', text: 'Add photos via drag & drop. They save in your browser.' },
           { target: '.nav-btn[href="gallery.html"]', title: 'Gallery', text: 'View, sort, and manage all your photos.' },
-          { target: '.nav-btn[href="display.html"]', title: 'Display', text: 'Build collages — resize, rotate, crop, filter, and export.' },
           { target: '.nav-btn[href="albums.html"]', title: 'Albums', text: 'Organise photos into folders.' },
-          { target: '.nav-btn[href="portfolio.html"]', title: 'Portfolio', text: 'Showcase your finished collages.' },
-          { target: '.cta-button', title: 'Ready!', text: 'Start by uploading some photos.' }
+          { target: '.nav-btn[href="portfolio.html"]', title: 'Portfolio', text: 'Showcase your featured photos in large immersive frames.' },
+          { target: '.cta-button', title: 'Ready!', text: 'Start by exploring the gallery.' }
         ];
 
         let tourStep = 0;

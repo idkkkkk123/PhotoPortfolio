@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Upload Manager</title>
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f8f8f8;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #0a0a0a;
+            margin-bottom: 1rem;
+        }
+        .instructions {
+            background: #f0f4f8;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            border-color: #007bff;
+            background: #f8f9ff;
+        }
+        .upload-area.dragover {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+        .file-input {
+            display: none;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem;
+            transition: background 0.3s ease;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .preview-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8f8f8;
+        }
+        .preview-item img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+        .preview-item input {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 0.5rem;
+            border: none;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            font-size: 0.8rem;
+        }
+        .output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 2rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 Photo Upload Manager</h1>
+        
+        <div class="instructions">
+            <h3>📋 Instructions</h3>
+            <ol>
+                <li>Drag and drop photos here or click to select files</li>
+                <li>Fill in photo names and descriptions (optional)</li>
+                <li>Click "Generate Manifest" to create the photo manifest</li>
+                <li>Copy the generated JSON into <code>photos/manifest.json</code></li>
+                <li>Move your photo files to the <code>photos/</code> folder</li>
+                <li>Deploy your site to Netlify!</li>
+            </ol>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <p>📁 Drop photos here or click to select</p>
+            <input type="file" id="fileInput" class="file-input" multiple accept="image/*">
+        </div>
+
+        <div>
+            <button class="btn" onclick="generateJSON()">🔄 Generate Manifest</button>
+            <button class="btn btn-secondary" onclick="clearAll()">🗑️ Clear All</button>
+        </div>
+
+        <div id="message"></div>
+
+        <div class="preview" id="preview"></div>
+
+        <div class="output" id="output" style="display: none;">
+            <h4>Generated JSON:</h4>
+            <div id="jsonOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedFiles = [];
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const output = document.getElementById('output');
+        const jsonOutput = document.getElementById('jsonOutput');
+        const message = document.getElementById('message');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const fileId = 'photo-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                        const fileName = file.name.replace(/\.[^/.]+$/, "");
+                        
+                        uploadedFiles.push({
+                            id: fileId,
+                            name: fileName,
+                            src: `photos/${file.name}`,
+                            dataUrl: e.target.result,
+                            date: new Date().toISOString(),
+                            featured: false,
+                            description: ''
+                        });
+                        
+                        renderPreview();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function renderPreview() {
+            preview.innerHTML = uploadedFiles.map((file, index) => `
+                <div class="preview-item">
+                    <img src="${file.dataUrl}" alt="${file.name}">
+                    <input type="text" placeholder="Photo name" value="${file.name}" 
+                           onchange="updateFile(${index}, 'name', this.value)">
+                    <input type="text" placeholder="Description (optional)" 
+                           onchange="updateFile(${index}, 'description', this.value)">
+                    <label style="position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">
+                        <input type="checkbox" onchange="updateFile(${index}, 'featured', this.checked)"> Featured
+                    </label>
+                </div>
+            `).join('');
+        }
+
+        function updateFile(index, field, value) {
+            uploadedFiles[index][field] = value;
+        }
+
+        function generateJSON() {
+            if (uploadedFiles.length === 0) {
+                showMessage('Please upload some photos first!', 'error');
+                return;
+            }
+
+            const photosJson = uploadedFiles.map(file => ({
+                id: file.id,
+                src: file.src,
+                name: file.name,
+                date: file.date,
+                featured: file.featured,
+                description: file.description
+            }));
+
+            const jsonContent = `// photos/manifest.json
+${JSON.stringify(photosJson, null, 2)}`;
+
+            jsonOutput.textContent = jsonContent;
+            output.style.display = 'block';
+            
+            showMessage('Manifest generated! Copy it to photos/manifest.json.', 'success');
+        }
+
+        function clearAll() {
+            uploadedFiles = [];
+            preview.innerHTML = '';
+            output.style.display = 'none';
+            message.innerHTML = '';
+        }
+
+        function showMessage(text, type) {
+            message.innerHTML = `<div class="${type}">${text}</div>`;
+            setTimeout(() => message.innerHTML = '', 5000);
+        }
+    </script>
+</body>
+</html>

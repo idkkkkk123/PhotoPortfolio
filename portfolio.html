@@ -14,8 +14,6 @@
     <div class="nav-container">
       <a class="nav-btn" href="index.html">Home</a>
       <a class="nav-btn" href="gallery.html">Gallery</a>
-      <a class="nav-btn" href="upload.html">Upload</a>
-      <a class="nav-btn" href="display.html">Display</a>
       <a class="nav-btn" href="albums.html">Albums</a>
       <a class="nav-btn" href="portfolio.html">Portfolio</a>
     </div>
@@ -25,6 +23,7 @@
     <section>
       <div class="section-header">
         <h2>Portfolio</h2>
+        <p class="section-subtitle">Large, immersive frames curated from featured photos.</p>
       </div>
 
       <div class="portfolio-grid" id="portfolioGrid"></div>
@@ -32,7 +31,7 @@
       <div class="empty-state" id="portfolioEmpty">
         <div class="empty-state-icon">🎨</div>
         <div class="empty-state-text">No portfolio items yet</div>
-        <div class="empty-state-hint">Create a display and click "Portfolio" to add it here</div>
+        <div class="empty-state-hint">Add items to `photos/manifest.json` with "featured": true</div>
       </div>
     </section>
   </main>
@@ -59,6 +58,8 @@
     const portfolioGrid = document.getElementById('portfolioGrid');
     const portfolioEmpty = document.getElementById('portfolioEmpty');
     const portfolioLightbox = document.getElementById('portfolioLightbox');
+    let currentPortfolioItems = [];
+    let usesStaticPortfolio = false;
 
     function loadPortfolio() {
       const raw = localStorage.getItem(STORAGE_KEYS.portfolio);
@@ -68,8 +69,19 @@
       localStorage.setItem(STORAGE_KEYS.portfolio, JSON.stringify(items));
     }
 
-    function renderPortfolio() {
-      const items = loadPortfolio();
+    async function renderPortfolio() {
+      const staticPhotos = await loadStaticPhotos();
+      const staticFeatured = staticPhotos
+        .filter(item => item && item.featured)
+        .map(item => ({
+          thumbnail: item.src,
+          title: item.name || 'Untitled',
+          description: item.description || '',
+          createdAt: item.date || new Date().toISOString()
+        }));
+      usesStaticPortfolio = staticFeatured.length > 0;
+      const items = usesStaticPortfolio ? staticFeatured : loadPortfolio();
+      currentPortfolioItems = items;
 
       if (items.length === 0) {
         portfolioGrid.style.display = 'none';
@@ -91,7 +103,7 @@
         <div class="portfolio-card" data-index="${index}" style="animation-delay:${Math.min(index * 0.05, 0.5)}s">
           <div class="portfolio-card-img">
             <img src="${item.thumbnail}" alt="${item.title || ''}" loading="lazy">
-            <button class="portfolio-card-del" data-index="${index}" title="Remove">×</button>
+            ${usesStaticPortfolio ? '' : `<button class="portfolio-card-del" data-index="${index}" title="Remove">×</button>`}
           </div>
           <div class="portfolio-card-info">
             <h3 class="portfolio-card-title">${truncTitle}</h3>
@@ -122,7 +134,7 @@
     }
 
     function openPortfolioLightbox(index) {
-      const items = loadPortfolio();
+      const items = currentPortfolioItems;
       const item = items[index];
       if (!item) return;
       document.getElementById('portfolioLbImg').src = item.thumbnail;
