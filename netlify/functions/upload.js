@@ -8,51 +8,55 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // Parse the multipart form data
-    const body = event.body;
+    const body = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body;
     const contentType = event.headers['content-type'];
     
     if (!contentType || !contentType.includes('multipart/form-data')) {
       return { statusCode: 400, body: 'Content-Type must be multipart/form-data' };
     }
 
-    // For now, we'll use a simple approach with base64 encoded files
-    const parsedBody = JSON.parse(event.body);
+    // Parse multipart form data
+    const boundary = contentType.split('boundary=')[1];
+    const parts = body.split('--' + boundary);
     
-    if (!parsedBody.files || !Array.isArray(parsedBody.files)) {
-      return { statusCode: 400, body: 'No files provided' };
-    }
-
     const uploadedFiles = [];
     
-    for (const file of parsedBody.files) {
-      // Generate unique filename
-      const timestamp = Date.now();
-      const randomString = Math.random().toString(36).substring(2, 8);
-      const filename = `${timestamp}_${randomString}_${file.name}`;
-      const filePath = path.join('/tmp', filename);
-      
-      // Decode base64 and save file
-      const buffer = Buffer.from(file.data, 'base64');
-      fs.writeFileSync(filePath, buffer);
-      
-      // Read the file back to get the data URL for display
-      const fileBuffer = fs.readFileSync(filePath);
-      const base64Data = fileBuffer.toString('base64');
-      const mimeType = file.type || 'image/jpeg';
-      const dataUrl = `data:${mimeType};base64,${base64Data}`;
-      
-      uploadedFiles.push({
-        id: timestamp + '_' + randomString,
-        name: file.name,
-        src: dataUrl,
-        size: file.size,
-        type: mimeType,
-        uploadedAt: new Date().toISOString()
-      });
-      
-      // Clean up temp file
-      fs.unlinkSync(filePath);
+    for (const part of parts) {
+      if (part.includes('Content-Disposition: form-data') && part.includes('filename=')) {
+        // Extract filename
+        const filenameMatch = part.match(/filename="([^"]+)"/);
+        if (!filenameMatch) continue;
+        
+        const filename = filenameMatch[1];
+        const timestamp = Date.now();
+        const uniqueFilename = `${timestamp}_${filename}`;
+        
+        // Extract file data
+        const dataStart = part.indexOf('\r\n\r\n') + 4;
+        const dataEnd = part.lastIndexOf('\r\n');
+        const fileData = part.substring(dataStart, dataEnd);
+        
+        // Save file to uploads directory
+        const uploadsDir = path.join(__dirname, '../../uploads');
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        
+        const filePath = path.join(uploadsDir, uniqueFilename);
+        fs.writeFileSync(filePath, Buffer.from(fileData, 'binary'));
+        
+        // Create public URL
+        const publicUrl = `/uploads/${uniqueFilename}`;
+        
+        uploadedFiles.push({
+          id: timestamp.toString(),
+          name: filename,
+          src: publicUrl,
+          size: fileData.length,
+          type: filename.split('.').pop().toLowerCase(),
+          uploadedAt: new Date().toISOString()
+        });
+      }
     }
 
     return {

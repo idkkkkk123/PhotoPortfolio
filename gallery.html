@@ -230,17 +230,29 @@
 
     setActiveNav();
 
-    // Load photos from localStorage (shared with admin)
-    const galleryPhotos = JSON.parse(localStorage.getItem('galleryPhotos') || '[]');
-    photos = galleryPhotos.map(function(photo) {
-      return { 
-        src: photo.image, 
-        name: photo.title || photo.name || photo.src.split('/').pop(),
-        category: photo.category || 'all',
-        description: photo.description || ''
-      };
-    });
-    renderGallery();
+    // Load photos from server data file
+    fetch('/.netlify/functions/load-photos')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          photos = data.photos.map(function(photo) {
+            return { 
+              src: photo.image, 
+              name: photo.title || photo.name || photo.src.split('/').pop(),
+              category: photo.category || 'all',
+              description: photo.description || ''
+            };
+          });
+          renderGallery();
+        } else {
+          photos = [];
+          renderGallery();
+        }
+      })
+      .catch(function() {
+        photos = [];
+        renderGallery();
+      });
   </script>
 </body>
 </html>

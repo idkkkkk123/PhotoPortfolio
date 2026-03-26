@@ -250,8 +250,26 @@
       if (confirm(`Delete ${selected.length} photo(s)?`)) {
         const idsToDelete = Array.from(selected).map(cb => cb.dataset.id);
         photos = photos.filter(p => !idsToDelete.includes(p.id));
-        localStorage.setItem('galleryPhotos', JSON.stringify(photos));
-        renderGallery();
+        
+        // Save to server data file
+        fetch('/.netlify/functions/save-photos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(photos)
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            renderGallery();
+          } else {
+            alert('Failed to delete photos: ' + data.error);
+          }
+        })
+        .catch(error => {
+          alert('Failed to delete photos: ' + error.message);
+        });
       }
     });
 
@@ -262,45 +280,89 @@
       const fileInput = document.getElementById('photoImage');
       
       if (fileInput.files.length > 0) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const newPhoto = {
-            id: Date.now().toString(),
-            title: title,
-            category: category,
-            description: description,
-            image: e.target.result,
-            name: fileInput.files[0].name
-          };
-          
-          photos.push(newPhoto);
-          localStorage.setItem('galleryPhotos', JSON.stringify(photos));
-          
-          // Reset form and close modal
-          document.getElementById('addPhotoForm').reset();
-          document.getElementById('addPhotoModal').style.display = 'none';
-          
-          renderGallery();
-        };
-        reader.readAsDataURL(fileInput.files[0]);
+        // Create FormData for real file upload
+        const formData = new FormData();
+        formData.append('files[0]', fileInput.files[0]);
+        
+        fetch('/.netlify/functions/upload', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(uploadResult => {
+          if (uploadResult.success) {
+            const newPhoto = {
+              id: uploadResult.files[0].id,
+              title: title,
+              category: category,
+              description: description,
+              image: uploadResult.files[0].src,
+              name: fileInput.files[0].name
+            };
+            
+            photos.push(newPhoto);
+            
+            // Save to server data file
+            fetch('/.netlify/functions/save-photos', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(photos)
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                // Reset form and close modal
+                document.getElementById('addPhotoForm').reset();
+                document.getElementById('addPhotoModal').style.display = 'none';
+                
+                renderGallery();
+              } else {
+                alert('Failed to save photo: ' + data.error);
+              }
+            })
+            .catch(error => {
+              alert('Failed to save photo: ' + error.message);
+            });
+          } else {
+            alert('Failed to upload photo: ' + uploadResult.error);
+          }
+        })
+        .catch(error => {
+          alert('Failed to upload photo: ' + error.message);
+        });
       }
     }
 
-    // Load photos from localStorage (shared with admin and viewer)
-    const galleryPhotos = JSON.parse(localStorage.getItem('galleryPhotos') || '[]');
-    photos = galleryPhotos.map(function(photo) {
-      return { 
-        id: photo.id,
-        src: photo.image, 
-        name: photo.title || photo.name || photo.src.split('/').pop(),
-        category: photo.category || 'all',
-        description: photo.description || ''
-      };
-    });
-    currentPhotoList = photos;
-
-    setActiveNav();
-    renderGallery();
+    // Load photos from server data file (shared with admin and viewer)
+    fetch('/.netlify/functions/load-photos')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          photos = data.photos.map(function(photo) {
+            return { 
+              id: photo.id,
+              src: photo.image, 
+              name: photo.title || photo.name || photo.src.split('/').pop(),
+              category: photo.category || 'all',
+              description: photo.description || ''
+            };
+          });
+          currentPhotoList = photos;
+        } else {
+          photos = [];
+          currentPhotoList = [];
+        }
+        setActiveNav();
+        renderGallery();
+      })
+      .catch(function() {
+        photos = [];
+        currentPhotoList = [];
+        setActiveNav();
+        renderGallery();
+      });
   </script>
 </body>
 </html>

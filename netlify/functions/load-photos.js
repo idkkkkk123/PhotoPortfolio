@@ -8,12 +8,13 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // Try to read from a data file
-    const dataPath = path.join('/tmp', 'photos.json');
+    // Try to read from data file
+    const dataPath = path.join(__dirname, '../../data');
+    const photosDataPath = path.join(dataPath, 'gallery.json');
     
     let photos = [];
-    if (fs.existsSync(dataPath)) {
-      const data = fs.readFileSync(dataPath, 'utf8');
+    if (fs.existsSync(photosDataPath)) {
+      const data = fs.readFileSync(photosDataPath, 'utf8');
       photos = JSON.parse(data);
     }
     
