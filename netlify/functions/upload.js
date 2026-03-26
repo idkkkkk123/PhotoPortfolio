@@ -8,18 +8,22 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    const body = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body;
+    // Handle FormData upload
     const contentType = event.headers['content-type'];
     
     if (!contentType || !contentType.includes('multipart/form-data')) {
       return { statusCode: 400, body: 'Content-Type must be multipart/form-data' };
     }
 
-    // Parse multipart form data
+    const body = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : Buffer.from(event.body, 'utf8');
     const boundary = contentType.split('boundary=')[1];
-    const parts = body.split('--' + boundary);
+    
+    if (!boundary) {
+      return { statusCode: 400, body: 'Invalid boundary in Content-Type' };
+    }
     
     const uploadedFiles = [];
+    const parts = body.toString().split('--' + boundary);
     
     for (const part of parts) {
       if (part.includes('Content-Disposition: form-data') && part.includes('filename=')) {
@@ -29,26 +33,18 @@ exports.handler = async function(event, context) {
         
         const filename = filenameMatch[1];
         const timestamp = Date.now();
-        const uniqueFilename = `${timestamp}_${filename}`;
         
-        // Extract file data
-        const dataStart = part.indexOf('\r\n\r\n') + 4;
-        const dataEnd = part.lastIndexOf('\r\n');
-        const fileData = part.substring(dataStart, dataEnd);
+        // Extract file data - look for the end of headers and start of data
+        const headerEndIndex = part.indexOf('\r\n\r\n');
+        if (headerEndIndex === -1) continue;
         
-        // For Netlify, we'll store files in the /tmp directory and return base64 data
-        // In production, you'd want to use a real storage service like AWS S3
-        const tempDir = '/tmp';
-        const filePath = path.join(tempDir, uniqueFilename);
+        const fileData = part.substring(headerEndIndex + 4);
         
-        try {
-          fs.writeFileSync(filePath, Buffer.from(fileData, 'binary'));
-        } catch (err) {
-          // If we can't write to /tmp, we'll just use base64 data
-          console.log('Could not write to temp directory, using base64');
-        }
+        // Remove any trailing boundary markers
+        const dataEndIndex = fileData.lastIndexOf('\r\n');
+        const cleanData = dataEndIndex > 0 ? fileData.substring(0, dataEndIndex) : fileData;
         
-        // Create a data URL for the image (this will be stored in localStorage for now)
+        // Get MIME type
         const mimeType = filename.split('.').pop().toLowerCase();
         const mimeTypes = {
           'jpg': 'image/jpeg',
@@ -58,14 +54,15 @@ exports.handler = async function(event, context) {
           'webp': 'image/webp'
         };
         
-        const base64Data = Buffer.from(fileData, 'binary').toString('base64');
+        // Create base64 data URL
+        const base64Data = Buffer.from(cleanData, 'binary').toString('base64');
         const dataUrl = `data:${mimeTypes[mimeType] || 'image/jpeg'};base64,${base64Data}`;
         
         uploadedFiles.push({
           id: timestamp.toString(),
           name: filename,
-          src: dataUrl, // Using data URL for now
-          size: fileData.length,
+          src: dataUrl,
+          size: cleanData.length,
           type: mimeType,
           uploadedAt: new Date().toISOString()
         });

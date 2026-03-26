@@ -226,6 +226,17 @@
       renderGallery();
     });
 
+    // Lightbox event listeners
+    lightboxClose.addEventListener('click', closeLightbox);
+    lightboxPrev.addEventListener('click', function() {
+      currentLightboxIndex = (currentLightboxIndex - 1 + currentPhotoList.length) % currentPhotoList.length;
+      openLightbox(currentPhotoList[currentLightboxIndex]);
+    });
+    lightboxNext.addEventListener('click', function() {
+      currentLightboxIndex = (currentLightboxIndex + 1) % currentPhotoList.length;
+      openLightbox(currentPhotoList[currentLightboxIndex]);
+    });
+
     // Admin functionality
     document.getElementById('addPhotoBtn').addEventListener('click', () => {
       document.getElementById('addPhotoModal').style.display = 'block';
