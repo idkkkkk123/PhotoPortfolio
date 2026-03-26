@@ -13,8 +13,9 @@
   <nav class="nav glass">
     <div class="nav-container">
       <a class="nav-btn" href="index.html">Home</a>
-      <a class="nav-btn" href="gallery.html">Gallery</a>
+      <a class="nav-btn active" href="gallery.html">Gallery</a>
       <a class="nav-btn" href="albums.html">Albums</a>
+      <a class="nav-btn" href="portfolio.html">Portfolio</a>
     </div>
   </nav>
 
@@ -34,7 +35,7 @@
       <div class="empty-state" id="emptyState">
         <div class="empty-state-icon">📸</div>
         <div class="empty-state-text">No photos yet</div>
-        <div class="empty-state-hint">Add images to the <code>images</code> folder and run <code>node scripts/build-data.js</code></div>
+        <div class="empty-state-hint">Admin can add photos through the admin panel</div>
       </div>
     </section>
   </main>
@@ -229,18 +230,17 @@
 
     setActiveNav();
 
-    fetch('data/gallery.json')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        photos = (data.images || []).map(function(img) {
-          return { src: img.src, name: img.name || img.src.split('/').pop() };
-        });
-        renderGallery();
-      })
-      .catch(function() {
-        photos = [];
-        renderGallery();
-      });
+    // Load photos from localStorage (shared with admin)
+    const galleryPhotos = JSON.parse(localStorage.getItem('galleryPhotos') || '[]');
+    photos = galleryPhotos.map(function(photo) {
+      return { 
+        src: photo.image, 
+        name: photo.title || photo.name || photo.src.split('/').pop(),
+        category: photo.category || 'all',
+        description: photo.description || ''
+      };
+    });
+    renderGallery();
   </script>
 </body>
 </html>

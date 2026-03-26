@@ -14,7 +14,8 @@
     <div class="nav-container">
       <a class="nav-btn" href="index.html">Home</a>
       <a class="nav-btn" href="gallery.html">Gallery</a>
-      <a class="nav-btn" href="albums.html">Albums</a>
+      <a class="nav-btn active" href="albums.html">Albums</a>
+      <a class="nav-btn" href="portfolio.html">Portfolio</a>
     </div>
   </nav>
 
@@ -27,7 +28,7 @@
       <div class="empty-state" id="albumsEmpty">
         <div class="empty-state-icon">📁</div>
         <div class="empty-state-text">No albums yet</div>
-        <div class="empty-state-hint">Add folders under <code>albums/</code> (e.g. <code>albums/travel</code>) with images, then run <code>node scripts/build-data.js</code></div>
+        <div class="empty-state-hint">Admin can create albums through the admin panel</div>
       </div>
     </section>
   </main>
@@ -149,14 +150,18 @@
 
     setActiveNav();
 
-    fetch('data/albums.json')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        renderAlbumGrid(data.albums || []);
-      })
-      .catch(function() {
-        renderAlbumGrid([]);
-      });
+    // Load albums from localStorage (shared with admin)
+    const albumsData = JSON.parse(localStorage.getItem('albums') || '[]');
+    const albumsForViewer = albumsData.map(function(album, index) {
+      return {
+        id: index.toString(),
+        name: album.name || 'Album ' + (index + 1),
+        images: (album.photos || []).map(function(photo) {
+          return photo.image || '';
+        }).filter(function(img) { return img; })
+      };
+    });
+    renderAlbumGrid(albumsForViewer);
   </script>
 </body>
 </html>
