@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cross-Device Sync Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+    .result { margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; }
+    .error { color: red; }
+    .success { color: green; }
+    .warning { color: orange; }
+    .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
+    .photo-item { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .photo-item img { width: 100%; height: 150px; object-fit: cover; }
+    .photo-info { padding: 10px; font-size: 12px; }
+    button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+    .btn-primary { background: #007bff; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn-warning { background: #ffc107; color: black; }
+  </style>
+</head>
+<body>
+  <h1>Cross-Device Synchronization Test</h1>
+  
+  <div class="test-section">
+    <h2>1. GitHub API Connection</h2>
+    <button onclick="testGitHubConnection()" class="btn-primary">Test GitHub Connection</button>
+    <div id="githubResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Load Photos from Server</h2>
+    <button onclick="loadServerPhotos()" class="btn-primary">Load from Server</button>
+    <button onclick="refreshServerPhotos()" class="btn-success">Refresh Server</button>
+    <div id="serverResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. localStorage Data</h2>
+    <button onclick="showLocalStorage()" class="btn-warning">Show localStorage</button>
+    <button onclick="clearLocalStorage()" class="btn-warning">Clear localStorage</button>
+    <div id="localStorageResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Test Photo Upload</h2>
+    <input type="file" id="testFile" accept="image/*">
+    <button onclick="testUpload()" class="btn-success">Upload Test Photo</button>
+    <div id="uploadResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>5. Current Photos</h2>
+    <div id="photosContainer" class="photo-grid"></div>
+  </div>
+
+  <script>
+    let currentPhotos = [];
+
+    async function testGitHubConnection() {
+      const result = document.getElementById('githubResult');
+      result.innerHTML = 'Testing GitHub connection...';
+      
+      try {
+        const response = await fetch('/.netlify/functions/load-photos');
+        const data = await response.json();
+        
+        if (response.ok) {
+          if (data.success) {
+            result.innerHTML = `<span class="success">✓ GitHub API connected successfully</span><br>
+              Photos loaded: ${data.photos ? data.photos.length : 0}<br>
+              SHA: ${data.sha || 'N/A'}`;
+          } else {
+            result.innerHTML = `<span class="error">✗ GitHub API error: ${data.error}</span>`;
+          }
+        } else {
+          result.innerHTML = `<span class="error">✗ Server error: ${response.status}</span>`;
+        }
+      } catch (error) {
+        result.innerHTML = `<span class="error">✗ Connection failed: ${error.message}</span>`;
+      }
+    }
+
+    async function loadServerPhotos() {
+      const result = document.getElementById('serverResult');
+      result.innerHTML = 'Loading photos from server...';
+      
+      try {
+        const response = await fetch('/.netlify/functions/load-photos');
+        const data = await response.json();
+        
+        if (data.success) {
+          currentPhotos = data.photos || [];
+          result.innerHTML = `<span class="success">✓ Loaded ${currentPhotos.length} photos from server</span>`;
+          displayPhotos(currentPhotos);
+        } else {
+          result.innerHTML = `<span class="error">✗ Failed to load: ${data.error}</span>`;
+        }
+      } catch (error) {
+        result.innerHTML = `<span class="error">✗ Error: ${error.message}</span>`;
+      }
+    }
+
+    async function refreshServerPhotos() {
+      const result = document.getElementById('serverResult');
+      result.innerHTML = 'Refreshing server photos...';
+      
+      // Force refresh by adding timestamp
+      try {
+        const response = await fetch('/.netlify/functions/load-photos?t=' + Date.now());
+        const data = await response.json();
+        
+        if (data.success) {
+          currentPhotos = data.photos || [];
+          result.innerHTML = `<span class="success">✓ Refreshed ${currentPhotos.length} photos from server</span>`;
+          displayPhotos(currentPhotos);
+        } else {
+          result.innerHTML = `<span class="error">✗ Failed to refresh: ${data.error}</span>`;
+        }
+      } catch (error) {
+        result.innerHTML = `<span class="error">✗ Error: ${error.message}</span>`;
+      }
+    }
+
+    function showLocalStorage() {
+      const result = document.getElementById('localStorageResult');
+      const localPhotos = JSON.parse(localStorage.getItem('galleryPhotos') || '[]');
+      
+      result.innerHTML = `<span class="warning">localStorage contains ${localPhotos.length} photos</span><br>
+        Last updated: ${localStorage.getItem('galleryPhotos_updated') || 'Unknown'}`;
+      
+      displayPhotos(localPhotos);
+    }
+
+    function clearLocalStorage() {
+      localStorage.removeItem('galleryPhotos');
+      localStorage.removeItem('galleryPhotos_updated');
+      document.getElementById('localStorageResult').innerHTML = '<span class="warning">localStorage cleared</span>';
+      displayPhotos([]);
+    }
+
+    async function testUpload() {
+      const fileInput = document.getElementById('testFile');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        document.getElementById('uploadResult').innerHTML = '<span class="error">Please select a file</span>';
+        return;
+      }
+
+      const result = document.getElementById('uploadResult');
+      result.innerHTML = 'Uploading test photo...';
+
+      try {
+        // Convert to base64
+        const base64Data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const fileData = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          name: 'test-' + file.name,
+          dataUrl: base64Data,
+          size: file.size,
+          type: file.type
+        };
+
+        const uploadResponse = await fetch('/.netlify/functions/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ files: [fileData] })
+        });
+
+        const uploadResult = await uploadResponse.json();
+
+        if (uploadResult.success) {
+          // Save to server
+          const galleryPhotos = uploadResult.files.map((file, index) => ({
+            id: file.id,
+            title: file.name,
+            category: 'test',
+            description: 'Test upload from sync test page',
+            image: file.src,
+            uploadedAt: file.uploadedAt
+          }));
+
+          const saveResponse = await fetch('/.netlify/functions/save-photos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(galleryPhotos)
+          });
+
+          const saveResult = await saveResponse.json();
+
+          if (saveResult.success) {
+            result.innerHTML = `<span class="success">✓ Test photo uploaded and saved to GitHub!</span>`;
+            setTimeout(() => loadServerPhotos(), 2000); // Refresh after 2 seconds
+          } else {
+            result.innerHTML = `<span class="error">✗ Upload succeeded but save failed: ${saveResult.error}</span>`;
+          }
+        } else {
+          result.innerHTML = `<span class="error">✗ Upload failed: ${uploadResult.error}</span>`;
+        }
+      } catch (error) {
+        result.innerHTML = `<span class="error">✗ Upload error: ${error.message}</span>`;
+      }
+    }
+
+    function displayPhotos(photos) {
+      const container = document.getElementById('photosContainer');
+      
+      if (photos.length === 0) {
+        container.innerHTML = '<p>No photos to display</p>';
+        return;
+      }
+
+      container.innerHTML = photos.map(photo => `
+        <div class="photo-item">
+          <img src="${photo.image}" alt="${photo.title || photo.name}" loading="lazy">
+          <div class="photo-info">
+            <strong>${photo.title || photo.name}</strong><br>
+            Category: ${photo.category || 'all'}<br>
+            Size: ${photo.size || 'Unknown'}<br>
+            Uploaded: ${photo.uploadedAt ? new Date(photo.uploadedAt).toLocaleString() : 'Unknown'}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Auto-load on page load
+    window.addEventListener('load', () => {
+      loadServerPhotos();
+    });
+  </script>
+</body>
+</html>

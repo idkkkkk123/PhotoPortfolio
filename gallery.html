@@ -230,11 +230,13 @@
 
     setActiveNav();
 
-    // Load photos from server data file with localStorage fallback
+    // Load photos from GitHub API first, then fallback to localStorage
     fetch('/.netlify/functions/load-photos')
       .then(response => response.json())
       .then(data => {
-        if (data.success && data.photos.length > 0) {
+        console.log('Gallery server response:', data);
+        
+        if (data.success && data.photos && data.photos.length > 0) {
           photos = data.photos.map(function(photo) {
             return { 
               src: photo.image, 
@@ -243,8 +245,10 @@
               description: photo.description || ''
             };
           });
+          console.log('Loaded photos from server:', photos.length);
           renderGallery();
         } else {
+          console.log('No photos on server, checking localStorage...');
           // Fallback to localStorage
           const galleryPhotos = JSON.parse(localStorage.getItem('galleryPhotos') || '[]');
           photos = galleryPhotos.map(function(photo) {
@@ -255,10 +259,12 @@
               description: photo.description || ''
             };
           });
+          console.log('Loaded photos from localStorage:', photos.length);
           renderGallery();
         }
       })
-      .catch(function() {
+      .catch(function(error) {
+        console.error('Error loading from server:', error);
         // Fallback to localStorage
         const galleryPhotos = JSON.parse(localStorage.getItem('galleryPhotos') || '[]');
         photos = galleryPhotos.map(function(photo) {
@@ -269,6 +275,7 @@
             description: photo.description || ''
           };
         });
+        console.log('Error occurred, loaded photos from localStorage:', photos.length);
         renderGallery();
       });
   </script>

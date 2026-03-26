@@ -48,3 +48,6 @@
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Headers = "Content-Type"
     Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+
+# Environment variables (set these in Netlify dashboard)
+# GITHUB_TOKEN = "your_github_personal_access_token"
