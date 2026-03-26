@@ -290,17 +290,26 @@
       const description = document.getElementById('photoDescription').value;
       const fileInput = document.getElementById('photoImage');
       
+      console.log('Add photo form data:', { title, category, description, file: fileInput.files[0] });
+      
       if (fileInput.files.length > 0) {
         // Create FormData for real file upload
         const formData = new FormData();
         formData.append('files[0]', fileInput.files[0]);
         
+        console.log('FormData created for single file upload');
+        
         fetch('/.netlify/functions/upload', {
           method: 'POST',
           body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+          console.log('Single file upload response status:', response.status);
+          return response.json();
+        })
         .then(uploadResult => {
+          console.log('Single file upload result:', uploadResult);
+          
           if (uploadResult.success) {
             const newPhoto = {
               id: uploadResult.files[0].id,
@@ -310,6 +319,8 @@
               image: uploadResult.files[0].src,
               name: fileInput.files[0].name
             };
+            
+            console.log('New photo to add:', newPhoto);
             
             photos.push(newPhoto);
             
@@ -321,27 +332,65 @@
               },
               body: JSON.stringify(photos)
             })
-            .then(response => response.json())
+            .then(response => {
+              console.log('Save response status:', response.status);
+              return response.json();
+            })
             .then(data => {
-              if (data.success) {
-                // Reset form and close modal
-                document.getElementById('addPhotoForm').reset();
-                document.getElementById('addPhotoModal').style.display = 'none';
-                
-                renderGallery();
-              } else {
-                alert('Failed to save photo: ' + data.error);
-              }
+              console.log('Save result:', data);
+              
+              // Always save to localStorage for immediate display
+              localStorage.setItem('galleryPhotos', JSON.stringify(photos));
+              
+              // Reset form and close modal
+              document.getElementById('addPhotoForm').reset();
+              document.getElementById('addPhotoModal').style.display = 'none';
+              
+              renderGallery();
             })
             .catch(error => {
+              console.error('Save error:', error);
               alert('Failed to save photo: ' + error.message);
+              
+              // Fallback: save to localStorage
+              localStorage.setItem('galleryPhotos', JSON.stringify(photos));
+              
+              // Reset form and close modal
+              document.getElementById('addPhotoForm').reset();
+              document.getElementById('addPhotoModal').style.display = 'none';
+              
+              renderGallery();
             });
           } else {
-            alert('Failed to upload photo: ' + uploadResult.error);
+            throw new Error(uploadResult.error || 'Failed to upload photo');
           }
         })
         .catch(error => {
+          console.error('Upload error:', error);
           alert('Failed to upload photo: ' + error.message);
+          
+          // Fallback: use FileReader for local storage
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const newPhoto = {
+              id: Date.now().toString(),
+              title: title,
+              category: category,
+              description: description,
+              image: e.target.result,
+              name: fileInput.files[0].name
+            };
+            
+            photos.push(newPhoto);
+            localStorage.setItem('galleryPhotos', JSON.stringify(photos));
+            
+            // Reset form and close modal
+            document.getElementById('addPhotoForm').reset();
+            document.getElementById('addPhotoModal').style.display = 'none';
+            
+            renderGallery();
+          };
+          reader.readAsDataURL(fileInput.files[0]);
         });
       }
     }

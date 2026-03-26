@@ -237,15 +237,21 @@
         // Create FormData for real file upload
         const formData = new FormData();
         uploads.forEach((upload, index) => {
+          console.log('Adding file to FormData:', upload.name, upload.file.size, upload.file.type);
           formData.append(`files[${index}]`, upload.file);
         });
 
+        console.log('FormData entries:', formData);
+        
         const uploadResponse = await fetch('/.netlify/functions/upload', {
           method: 'POST',
           body: formData
         });
 
+        console.log('Upload response status:', uploadResponse.status);
+        
         const uploadResult = await uploadResponse.json();
+        console.log('Upload result:', uploadResult);
         
         if (uploadResult.success) {
           // Save metadata to data file
@@ -258,6 +264,8 @@
             uploadedAt: file.uploadedAt
           }));
 
+          console.log('Gallery photos to save:', galleryPhotos);
+
           // Save to server data file
           const saveResponse = await fetch('/.netlify/functions/save-photos', {
             method: 'POST',
@@ -268,41 +276,47 @@
           });
 
           const saveResult = await saveResponse.json();
+          console.log('Save result:', saveResult);
           
-          if (saveResult.success) {
-            // Also save to localStorage for immediate display and fallback
-            localStorage.setItem('galleryPhotos', JSON.stringify(galleryPhotos));
+          // Always save to localStorage for immediate display and fallback
+          localStorage.setItem('galleryPhotos', JSON.stringify(galleryPhotos));
 
-            // Clear uploads
-            uploads = [];
-            previewCarousel.style.display = 'none';
-            fileInput.value = '';
+          // Clear uploads
+          uploads = [];
+          previewCarousel.style.display = 'none';
+          fileInput.value = '';
 
-            // Show success message
-            alert(`Successfully uploaded ${uploadResult.files.length} photos to gallery!`);
-            
-            // Refresh recent photos
-            renderRecent();
-          } else {
-            // Even if server save fails, save to localStorage
-            localStorage.setItem('galleryPhotos', JSON.stringify(galleryPhotos));
-            
-            // Clear uploads
-            uploads = [];
-            previewCarousel.style.display = 'none';
-            fileInput.value = '';
-
-            // Show success message
-            alert(`Successfully uploaded ${uploadResult.files.length} photos to gallery!`);
-            
-            // Refresh recent photos
-            renderRecent();
-          }
+          // Show success message
+          alert(`Successfully uploaded ${uploadResult.files.length} photos to gallery!`);
+          
+          // Refresh recent photos
+          renderRecent();
         } else {
           throw new Error(uploadResult.error || 'Upload failed');
         }
       } catch (err) {
+        console.error('Upload error:', err);
         alert('Failed to save photos: ' + err.message);
+        
+        // Fallback: save to localStorage directly
+        const galleryPhotos = uploads.map((upload, index) => ({
+          id: Date.now().toString() + '_' + index,
+          title: upload.name,
+          category: 'all',
+          description: '',
+          image: upload.dataUrl,
+          uploadedAt: new Date().toISOString()
+        }));
+        
+        localStorage.setItem('galleryPhotos', JSON.stringify(galleryPhotos));
+        
+        // Clear uploads
+        uploads = [];
+        previewCarousel.style.display = 'none';
+        fileInput.value = '';
+
+        alert(`Photos saved locally (${galleryPhotos.length} photos). Upload to server failed.`);
+        renderRecent();
       }
 
       saveAllBtn.disabled = false;
