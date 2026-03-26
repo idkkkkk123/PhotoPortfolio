@@ -1,5 +1,6 @@
 [build]
   publish = "."
+  functions = "netlify/functions"
 
 # HTML pages — always revalidate
 [[headers]]
@@ -39,3 +40,17 @@
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
+
+# Redirects for uploaded files
+[[redirects]]
+  from = "/photos/uploads/*"
+  to = "/.netlify/functions/serve-file?path=:splat"
+  status = 200
+
+# Netlify Functions headers
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Headers = "Content-Type"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"

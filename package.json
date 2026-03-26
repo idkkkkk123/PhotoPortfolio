@@ -1,0 +1,19 @@
+{
+  "name": "photo-portfolio",
+  "version": "1.0.0",
+  "description": "Photography portfolio website with dual admin/viewer system",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8080",
+    "build": "echo 'No build step needed - static site'"
+  },
+  "dependencies": {
+    "busboy": "^1.6.0"
+  },
+  "devDependencies": {
+    "http.server": "^0.1.0"
+  },
+  "keywords": ["photography", "portfolio", "netlify", "static-site"],
+  "author": "Photography Portfolio",
+  "license": "MIT"
+}
