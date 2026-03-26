@@ -1,1 +1,2 @@
-/*    /index.html   404
+# Netlify Functions are handled automatically — no redirects needed
+# Do NOT add a catch-all /* redirect as it would intercept function calls

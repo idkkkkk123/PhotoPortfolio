@@ -1,8 +1,9 @@
 [build]
+  command = "node scripts/build-data.js"
   publish = "."
   functions = "netlify/functions"
 
-# HTML pages — always revalidate
+# HTML pages — revalidate
 [[headers]]
   for = "/*.html"
   [headers.values]
@@ -11,29 +12,29 @@
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# CSS — cache with revalidation
+# CSS — short cache with revalidation
 [[headers]]
   for = "/*.css"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
-# JS — cache with revalidation
+# JS — short cache with revalidation
 [[headers]]
   for = "/*.js"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 # Images — long cache
 [[headers]]
-  for = "/*.{png,jpg,jpeg,gif,svg,webp,ico}"
+  for = "/*.{png,jpg,jpeg,gif,svg,webp,ico,avif}"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Fonts — long cache
+# JSON data
 [[headers]]
-  for = "/*.{woff,woff2,ttf,eot}"
+  for = "/data/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 # Default fallback
 [[headers]]

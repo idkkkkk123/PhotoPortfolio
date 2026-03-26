@@ -14,10 +14,7 @@
     <div class="nav-container">
       <a class="nav-btn" href="index.html">Home</a>
       <a class="nav-btn" href="gallery.html">Gallery</a>
-      <a class="nav-btn" href="upload.html">Upload</a>
-      <a class="nav-btn" href="display.html">Display</a>
       <a class="nav-btn" href="albums.html">Albums</a>
-      <a class="nav-btn" href="portfolio.html">Portfolio</a>
     </div>
   </nav>
 
@@ -26,67 +23,30 @@
       <div class="section-header">
         <h2>Albums</h2>
       </div>
-
-      <div style="text-align:center;margin-bottom:2.5rem;">
-        <button class="cta-button" id="createFolderBtn" style="font-size:0.8rem;padding:0.8rem 2rem;">+ New Folder</button>
-      </div>
-
       <div class="album-grid" id="albumGrid"></div>
-
       <div class="empty-state" id="albumsEmpty">
         <div class="empty-state-icon">📁</div>
         <div class="empty-state-text">No albums yet</div>
-        <div class="empty-state-hint">Click "+ New Folder" to create your first album</div>
+        <div class="empty-state-hint">Add folders under <code>albums/</code> (e.g. <code>albums/travel</code>) with images, then run <code>node scripts/build-data.js</code></div>
       </div>
     </section>
   </main>
 
-  <!-- Create / Rename Folder Modal -->
-  <div id="folderModal" class="modal">
-    <div class="modal-content" style="max-width:400px;">
-      <button class="modal-close-btn" id="closeFolderModal">&times;</button>
-      <h3 id="folderModalTitle">New Folder</h3>
-      <input type="text" class="modal-input" id="folderNameInput" placeholder="Folder name">
-      <div class="modal-buttons">
-        <button class="modal-btn modal-btn-secondary" id="cancelFolderModal">Cancel</button>
-        <button class="modal-btn modal-btn-primary" id="saveFolderModal">Create</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Album Viewer Modal (folder contents) -->
+  <!-- Album Viewer Modal -->
   <div id="albumViewerModal" class="modal album-viewer-modal">
-    <div class="album-viewer-container" style="display:flex;flex-direction:column;">
+    <div class="album-viewer-container">
       <div class="alb-viewer-header">
         <h3 id="viewerAlbumName">Album</h3>
-        <div class="alb-viewer-actions">
-          <button class="de-tb-btn" id="addPhotosBtn">+ Add Photos</button>
-          <button class="de-tb-btn" id="viewerCloseBtn">&times;</button>
-        </div>
+        <button class="de-tb-btn" id="viewerCloseBtn">&times; Close</button>
       </div>
       <div class="alb-viewer-grid" id="albumViewerGrid"></div>
       <div class="empty-state" id="viewerEmpty" style="display:none;">
         <div class="empty-state-icon">🖼️</div>
-        <div class="empty-state-text">No photos in this folder</div>
-        <div class="empty-state-hint">Click "+ Add Photos" to add from your gallery</div>
+        <div class="empty-state-text">No photos in this album</div>
       </div>
     </div>
   </div>
 
-  <!-- Add Photos from Gallery Modal -->
-  <div id="addPhotosModal" class="modal" style="z-index:4500;">
-    <div class="modal-content" style="max-width:600px;">
-      <button class="modal-close-btn" id="closeAddPhotos">&times;</button>
-      <h3>Add Photos from Gallery</h3>
-      <div id="galleryPickerGrid" class="alb-picker-grid"></div>
-      <div class="modal-buttons" style="margin-top:1rem;">
-        <button class="modal-btn modal-btn-secondary" id="cancelAddPhotos">Cancel</button>
-        <button class="modal-btn modal-btn-primary" id="confirmAddPhotos">Add Selected</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Photo Zoom Lightbox -->
   <div id="photoZoomLightbox" class="lightbox photo-zoom-lightbox">
     <button class="lightbox-close-btn" id="zoomCloseBtn">×</button>
     <img id="zoomImage" src="" alt="Zoomed photo">
@@ -94,342 +54,47 @@
 
   <script src="common.js"></script>
   <script>
-    const albumGrid = document.getElementById('albumGrid');
-    const albumsEmpty = document.getElementById('albumsEmpty');
-    const albumViewerModal = document.getElementById('albumViewerModal');
-    const albumViewerGrid = document.getElementById('albumViewerGrid');
-    const viewerEmpty = document.getElementById('viewerEmpty');
-    const photoZoomLightbox = document.getElementById('photoZoomLightbox');
-    const zoomImage = document.getElementById('zoomImage');
-    const folderModal = document.getElementById('folderModal');
-    const addPhotosModal = document.getElementById('addPhotosModal');
+    var topLoader = document.getElementById('topLoader');
+    function showLoader() { topLoader.classList.add('active'); }
+    function hideLoader() { topLoader.classList.remove('active'); }
 
-    let currentViewingAlbum = null;
-    let editingAlbumId = null;
-    let selectedPhotoIds = new Set();
+    var albumGrid = document.getElementById('albumGrid');
+    var albumsEmpty = document.getElementById('albumsEmpty');
+    var albumViewerModal = document.getElementById('albumViewerModal');
+    var albumViewerGrid = document.getElementById('albumViewerGrid');
+    var viewerEmpty = document.getElementById('viewerEmpty');
+    var photoZoomLightbox = document.getElementById('photoZoomLightbox');
+    var zoomImage = document.getElementById('zoomImage');
+    var currentViewingAlbum = null;
 
-    // --- Storage ---
-    function loadFolders() {
-      const raw = localStorage.getItem(STORAGE_KEYS.savedAlbums);
-      return raw ? JSON.parse(raw) : [];
-    }
-    function saveFolders(folders) {
-      localStorage.setItem(STORAGE_KEYS.savedAlbums, JSON.stringify(folders));
-    }
-
-    // --- Cover generation: auto-collage from folder photos ---
-    function generateCoverDataUrl(photos, size = 300) {
-      const c = document.createElement('canvas');
-      c.width = size; c.height = size;
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = '#f4f4f5';
-      ctx.fillRect(0, 0, size, size);
-
-      if (!photos || photos.length === 0) return c.toDataURL('image/png');
-
-      return new Promise(resolve => {
-        const count = Math.min(photos.length, 4);
-        let loaded = 0;
-        const positions = count === 1
-          ? [[0, 0, size, size]]
-          : count === 2
-            ? [[0, 0, size/2, size], [size/2, 0, size/2, size]]
-            : count === 3
-              ? [[0, 0, size/2, size], [size/2, 0, size/2, size/2], [size/2, size/2, size/2, size/2]]
-              : [[0, 0, size/2, size/2], [size/2, 0, size/2, size/2], [0, size/2, size/2, size/2], [size/2, size/2, size/2, size/2]];
-
-        for (let i = 0; i < count; i++) {
-          const img = new Image();
-          img.onload = () => {
-            const [x, y, w, h] = positions[i];
-            const gap = 2;
-            ctx.save();
-            ctx.beginPath();
-            ctx.roundRect(x + gap, y + gap, w - gap*2, h - gap*2, 6);
-            ctx.clip();
-            // Cover fit
-            const scale = Math.max((w - gap*2) / img.width, (h - gap*2) / img.height);
-            const dw = img.width * scale, dh = img.height * scale;
-            ctx.drawImage(img, x + gap + (w - gap*2 - dw)/2, y + gap + (h - gap*2 - dh)/2, dw, dh);
-            ctx.restore();
-            loaded++;
-            if (loaded === count) resolve(c.toDataURL('image/png'));
-          };
-          img.onerror = () => { loaded++; if (loaded === count) resolve(c.toDataURL('image/png')); };
-          img.src = photos[i].src || photos[i];
-        }
-      });
-    }
-
-    // --- Render album grid ---
-    async function renderAlbumGrid() {
-      const folders = loadFolders();
-
-      if (folders.length === 0) {
-        albumGrid.style.display = 'none';
-        albumsEmpty.style.display = 'block';
-        return;
-      }
-
-      albumGrid.style.display = 'grid';
-      albumsEmpty.style.display = 'none';
-
-      // Generate covers
-      const cards = [];
-      for (const folder of folders) {
-        const photoSrcs = (folder.photos || []).slice(0, 4);
-        let coverUrl = '';
-        if (photoSrcs.length > 0) {
-          coverUrl = await generateCoverDataUrl(photoSrcs);
-        } else if (folder.thumbnail) {
-          coverUrl = folder.thumbnail;
-        } else {
-          const emptyCanvas = document.createElement('canvas');
-          emptyCanvas.width = 300; emptyCanvas.height = 300;
-          const ectx = emptyCanvas.getContext('2d');
-          ectx.fillStyle = '#f4f4f5'; ectx.fillRect(0, 0, 300, 300);
-          ectx.fillStyle = '#d4d4d8'; ectx.font = '48px sans-serif'; ectx.textAlign = 'center';
-          ectx.fillText('📁', 150, 170);
-          coverUrl = emptyCanvas.toDataURL('image/png');
-        }
-
-        const photoCount = folder.photos ? folder.photos.length : (folder.pages ? folder.pages.length : 0);
-        cards.push(`
-          <div class="album-card" data-album-id="${folder.id}">
-            <div class="album-card-image">
-              <img src="${coverUrl}" alt="${folder.name}">
-            </div>
-            <div class="album-card-info">
-              <h3 class="album-card-title">${folder.name}</h3>
-              <p class="album-card-meta">${photoCount} photo${photoCount !== 1 ? 's' : ''}</p>
-            </div>
-            <button class="album-card-menu-btn" data-album-id="${folder.id}" title="Options">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
-            </button>
-            <div class="album-card-dropdown" data-album-id="${folder.id}">
-              <button class="album-dropdown-item album-rename-btn" data-album-id="${folder.id}">Rename</button>
-              <button class="album-dropdown-item album-delete-btn" data-album-id="${folder.id}" style="color:#dc2626;">Delete</button>
-            </div>
-          </div>`);
-      }
-
-      albumGrid.innerHTML = cards.join('');
-
-      // Event listeners — open album on card click
-      document.querySelectorAll('.album-card').forEach(card => {
-        card.addEventListener('click', e => {
-          if (e.target.closest('.album-card-menu-btn') || e.target.closest('.album-card-dropdown')) return;
-          openAlbumViewer(card.dataset.albumId);
-        });
-      });
-
-      // Three-dot menu toggle
-      document.querySelectorAll('.album-card-menu-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-          e.stopPropagation();
-          const dd = btn.parentElement.querySelector('.album-card-dropdown');
-          // Close all other dropdowns first
-          document.querySelectorAll('.album-card-dropdown.open').forEach(d => {
-            if (d !== dd) d.classList.remove('open');
+    function openAlbumViewer(album) {
+      currentViewingAlbum = album;
+      document.getElementById('viewerAlbumName').textContent = album.name;
+      if (!album.images || album.images.length === 0) {
+        albumViewerGrid.style.display = 'none';
+        viewerEmpty.style.display = 'block';
+      } else {
+        viewerEmpty.style.display = 'none';
+        albumViewerGrid.style.display = 'grid';
+        albumViewerGrid.innerHTML = album.images.map(function(src) {
+          var name = src.split('/').pop();
+          return '<div class="alb-photo-card"><img src="' + src + '" alt="' + name + '" loading="lazy"><div class="gallery-item-name">' + (name.length > 18 ? name.substring(0, 18) + '…' : name) + '</div></div>';
+        }).join('');
+        albumViewerGrid.querySelectorAll('.alb-photo-card').forEach(function(card, i) {
+          card.addEventListener('click', function() {
+            openPhotoZoom(album.images[i]);
           });
-          dd.classList.toggle('open');
         });
-      });
-
-      // Rename from dropdown
-      document.querySelectorAll('.album-rename-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-          e.stopPropagation();
-          btn.closest('.album-card-dropdown').classList.remove('open');
-          editingAlbumId = btn.dataset.albumId;
-          const folders = loadFolders();
-          const f = folders.find(x => x.id === editingAlbumId);
-          document.getElementById('folderModalTitle').textContent = 'Rename Folder';
-          document.getElementById('folderNameInput').value = f ? f.name : '';
-          document.getElementById('saveFolderModal').textContent = 'Rename';
-          folderModal.classList.add('active');
-          setTimeout(() => document.getElementById('folderNameInput').focus(), 100);
-        });
-      });
-
-      // Delete from dropdown
-      document.querySelectorAll('.album-delete-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-          e.stopPropagation();
-          btn.closest('.album-card-dropdown').classList.remove('open');
-          if (confirm('Delete this folder?')) {
-            deleteFolder(btn.dataset.albumId);
-          }
-        });
-      });
-
-      // Close dropdowns on outside click
-      document.addEventListener('click', () => {
-        document.querySelectorAll('.album-card-dropdown.open').forEach(d => d.classList.remove('open'));
-      });
-    }
-
-    // --- Folder CRUD ---
-    function createFolder(name) {
-      const folders = loadFolders();
-      const folder = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        name: name || 'Untitled Folder',
-        photos: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      folders.push(folder);
-      saveFolders(folders);
-      renderAlbumGrid();
-    }
-
-    function deleteFolder(id) {
-      let folders = loadFolders();
-      folders = folders.filter(f => f.id !== id);
-      saveFolders(folders);
-      renderAlbumGrid();
-    }
-
-    function renameFolder(id, newName) {
-      const folders = loadFolders();
-      const f = folders.find(x => x.id === id);
-      if (f) { f.name = newName; f.updatedAt = new Date().toISOString(); }
-      saveFolders(folders);
-    }
-
-    function addPhotosToFolder(folderId, photoObjects) {
-      const folders = loadFolders();
-      const f = folders.find(x => x.id === folderId);
-      if (!f) return;
-      if (!f.photos) f.photos = [];
-      photoObjects.forEach(p => {
-        if (!f.photos.find(x => String(x.id) === String(p.id))) {
-          f.photos.push({ id: p.id, src: p.src, name: p.name });
-        }
-      });
-      f.updatedAt = new Date().toISOString();
-      saveFolders(folders);
-    }
-
-    function removePhotoFromFolder(folderId, photoId) {
-      const folders = loadFolders();
-      const f = folders.find(x => x.id === folderId);
-      if (!f || !f.photos) return;
-      f.photos = f.photos.filter(p => String(p.id) !== String(photoId));
-      f.updatedAt = new Date().toISOString();
-      saveFolders(folders);
-    }
-
-    // --- Album Viewer (folder contents) ---
-    function openAlbumViewer(albumId) {
-      const folders = loadFolders();
-      currentViewingAlbum = folders.find(a => a.id === albumId);
-      if (!currentViewingAlbum) return;
-
-      document.getElementById('viewerAlbumName').textContent = currentViewingAlbum.name;
-      renderAlbumContents();
+      }
       albumViewerModal.classList.add('active');
       document.body.style.overflow = 'hidden';
     }
 
-    function renderAlbumContents() {
-      if (!currentViewingAlbum) return;
-      const photos = currentViewingAlbum.photos || [];
-
-      if (photos.length === 0) {
-        albumViewerGrid.style.display = 'none';
-        viewerEmpty.style.display = 'block';
-        return;
-      }
-
-      viewerEmpty.style.display = 'none';
-      albumViewerGrid.style.display = 'grid';
-
-      albumViewerGrid.innerHTML = photos.map(p => {
-        const truncName = (p.name || '').length > 18 ? (p.name || '').substring(0, 18) + '…' : (p.name || '');
-        return `
-        <div class="alb-photo-card" data-photo-id="${p.id}">
-          <img src="${p.src}" alt="${p.name || ''}" loading="lazy">
-          <button class="delete-btn alb-remove-btn" data-photo-id="${p.id}" title="Remove">×</button>
-          <div class="gallery-item-name">${truncName}</div>
-        </div>`;
-      }).join('');
-
-      albumViewerGrid.querySelectorAll('.alb-photo-card').forEach(card => {
-        card.addEventListener('click', e => {
-          if (e.target.classList.contains('alb-remove-btn')) return;
-          const photo = photos.find(p => String(p.id) === String(card.dataset.photoId));
-          if (photo) openPhotoZoom(photo.src);
-        });
-      });
-
-      albumViewerGrid.querySelectorAll('.alb-remove-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-          e.stopPropagation();
-          removePhotoFromFolder(currentViewingAlbum.id, btn.dataset.photoId);
-          // Refresh
-          const folders = loadFolders();
-          currentViewingAlbum = folders.find(a => a.id === currentViewingAlbum.id);
-          renderAlbumContents();
-          renderAlbumGrid();
-        });
-      });
+    function closeAlbumViewer() {
+      albumViewerModal.classList.remove('active');
+      document.body.style.overflow = '';
     }
 
-    // --- Add Photos Picker ---
-    let pickerPhotos = []; // full photo objects for the picker
-
-    function openAddPhotosModal() {
-      selectedPhotoIds = new Set();
-      pickerPhotos = loadPhotos();
-      const existing = new Set((currentViewingAlbum.photos || []).map(p => String(p.id)));
-      const grid = document.getElementById('galleryPickerGrid');
-
-      if (pickerPhotos.length === 0) {
-        grid.innerHTML = '<div class="empty-state" style="padding:2rem;"><p>No photos in gallery. Upload some first.</p></div>';
-      } else {
-        grid.innerHTML = pickerPhotos.map((p, idx) => `
-          <div class="alb-picker-item ${existing.has(String(p.id)) ? 'already-added' : ''}" data-idx="${idx}">
-            <img src="${p.src}" alt="${p.name || ''}" loading="lazy">
-            <div class="alb-picker-check"></div>
-            ${existing.has(String(p.id)) ? '<div class="alb-picker-badge">Added</div>' : ''}
-          </div>
-        `).join('');
-
-        grid.querySelectorAll('.alb-picker-item').forEach(item => {
-          if (item.classList.contains('already-added')) return;
-          item.addEventListener('click', () => {
-            const idx = item.dataset.idx;
-            if (selectedPhotoIds.has(idx)) {
-              selectedPhotoIds.delete(idx);
-              item.classList.remove('selected');
-            } else {
-              selectedPhotoIds.add(idx);
-              item.classList.add('selected');
-            }
-          });
-        });
-      }
-
-      addPhotosModal.classList.add('active');
-    }
-
-    function confirmAddPhotos() {
-      if (selectedPhotoIds.size === 0) { addPhotosModal.classList.remove('active'); return; }
-      const toAdd = [...selectedPhotoIds].map(idx => pickerPhotos[parseInt(idx)]).filter(Boolean);
-      if (toAdd.length === 0) { addPhotosModal.classList.remove('active'); return; }
-      addPhotosToFolder(currentViewingAlbum.id, toAdd);
-
-      // Refresh viewer and album grid covers
-      const folders = loadFolders();
-      currentViewingAlbum = folders.find(a => a.id === currentViewingAlbum.id);
-      renderAlbumContents();
-      renderAlbumGrid();
-      addPhotosModal.classList.remove('active');
-    }
-
-    // --- Zoom ---
     function openPhotoZoom(src) {
       zoomImage.src = src;
       photoZoomLightbox.classList.add('active');
@@ -437,67 +102,61 @@
     function closePhotoZoom() {
       photoZoomLightbox.classList.remove('active');
     }
-    function closeAlbumViewer() {
-      albumViewerModal.classList.remove('active');
-      document.body.style.overflow = '';
-      renderAlbumGrid(); // refresh covers
+
+    function renderAlbumGrid(albums) {
+      if (!albums || albums.length === 0) {
+        albumGrid.style.display = 'none';
+        albumsEmpty.style.display = 'block';
+        hideLoader();
+        return;
+      }
+      albumGrid.style.display = 'grid';
+      albumsEmpty.style.display = 'none';
+      var coverUrl = '';
+      var cards = albums.map(function(album) {
+        var firstImg = album.images && album.images[0];
+        coverUrl = firstImg || '';
+        var count = album.images ? album.images.length : 0;
+        return '<div class="album-card" data-album-id="' + album.id + '">' +
+          '<div class="album-card-image">' +
+          (coverUrl ? '<img src="' + coverUrl + '" alt="' + (album.name || '') + '">' : '<div class="album-card-placeholder"></div>') +
+          '</div>' +
+          '<div class="album-card-info">' +
+          '<h3 class="album-card-title">' + (album.name || album.id) + '</h3>' +
+          '<p class="album-card-meta">' + count + ' photo' + (count !== 1 ? 's' : '') + '</p>' +
+          '</div></div>';
+      }).join('');
+      albumGrid.innerHTML = cards;
+      albumGrid.querySelectorAll('.album-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+          var album = albums.find(function(a) { return a.id === card.dataset.albumId; });
+          if (album) openAlbumViewer(album);
+        });
+      });
+      hideLoader();
     }
 
-    // --- Events ---
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('createFolderBtn').addEventListener('click', () => {
-        editingAlbumId = null;
-        document.getElementById('folderModalTitle').textContent = 'New Folder';
-        document.getElementById('folderNameInput').value = '';
-        document.getElementById('saveFolderModal').textContent = 'Create';
-        folderModal.classList.add('active');
-        setTimeout(() => document.getElementById('folderNameInput').focus(), 100);
-      });
-
-      document.getElementById('saveFolderModal').addEventListener('click', () => {
-        const name = document.getElementById('folderNameInput').value.trim();
-        if (!name) return;
-        if (editingAlbumId) {
-          renameFolder(editingAlbumId, name);
-          editingAlbumId = null;
-          renderAlbumGrid();
-        } else {
-          createFolder(name);
-        }
-        folderModal.classList.remove('active');
-      });
-
-      document.getElementById('folderNameInput').addEventListener('keydown', e => {
-        if (e.key === 'Enter') document.getElementById('saveFolderModal').click();
-      });
-
-      document.getElementById('closeFolderModal').addEventListener('click', () => folderModal.classList.remove('active'));
-      document.getElementById('cancelFolderModal').addEventListener('click', () => folderModal.classList.remove('active'));
-      folderModal.addEventListener('click', e => { if (e.target === folderModal) folderModal.classList.remove('active'); });
-
-      document.getElementById('viewerCloseBtn').addEventListener('click', closeAlbumViewer);
-      document.getElementById('addPhotosBtn').addEventListener('click', openAddPhotosModal);
-      document.getElementById('closeAddPhotos').addEventListener('click', () => addPhotosModal.classList.remove('active'));
-      document.getElementById('cancelAddPhotos').addEventListener('click', () => addPhotosModal.classList.remove('active'));
-      document.getElementById('confirmAddPhotos').addEventListener('click', confirmAddPhotos);
-      addPhotosModal.addEventListener('click', e => { if (e.target === addPhotosModal) addPhotosModal.classList.remove('active'); });
-
-      albumViewerModal.addEventListener('click', e => { if (e.target === albumViewerModal) closeAlbumViewer(); });
-      document.getElementById('zoomCloseBtn').addEventListener('click', closePhotoZoom);
-      photoZoomLightbox.addEventListener('click', e => { if (e.target === photoZoomLightbox) closePhotoZoom(); });
-
-      document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') {
-          if (addPhotosModal.classList.contains('active')) addPhotosModal.classList.remove('active');
-          else if (photoZoomLightbox.classList.contains('active')) closePhotoZoom();
-          else if (albumViewerModal.classList.contains('active')) closeAlbumViewer();
-          else if (folderModal.classList.contains('active')) folderModal.classList.remove('active');
-        }
-      });
-
-      setActiveNav();
-      renderAlbumGrid();
+    document.getElementById('viewerCloseBtn').addEventListener('click', closeAlbumViewer);
+    albumViewerModal.addEventListener('click', function(e) { if (e.target === albumViewerModal) closeAlbumViewer(); });
+    document.getElementById('zoomCloseBtn').addEventListener('click', closePhotoZoom);
+    photoZoomLightbox.addEventListener('click', function(e) { if (e.target === photoZoomLightbox) closePhotoZoom(); });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        if (photoZoomLightbox.classList.contains('active')) closePhotoZoom();
+        else if (albumViewerModal.classList.contains('active')) closeAlbumViewer();
+      }
     });
+
+    setActiveNav();
+
+    fetch('data/albums.json')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        renderAlbumGrid(data.albums || []);
+      })
+      .catch(function() {
+        renderAlbumGrid([]);
+      });
   </script>
 </body>
 </html>
