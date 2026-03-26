@@ -335,11 +335,11 @@
       }
     }
 
-    // Load photos from server data file (shared with admin and viewer)
+    // Load photos from server data file with localStorage fallback (shared with admin and viewer)
     fetch('/.netlify/functions/load-photos')
       .then(response => response.json())
       .then(data => {
-        if (data.success) {
+        if (data.success && data.photos.length > 0) {
           photos = data.photos.map(function(photo) {
             return { 
               id: photo.id,
@@ -351,15 +351,35 @@
           });
           currentPhotoList = photos;
         } else {
-          photos = [];
-          currentPhotoList = [];
+          // Fallback to localStorage
+          const galleryPhotos = JSON.parse(localStorage.getItem('galleryPhotos') || '[]');
+          photos = galleryPhotos.map(function(photo) {
+            return { 
+              id: photo.id,
+              src: photo.image, 
+              name: photo.title || photo.name || photo.src.split('/').pop(),
+              category: photo.category || 'all',
+              description: photo.description || ''
+            };
+          });
+          currentPhotoList = photos;
         }
         setActiveNav();
         renderGallery();
       })
       .catch(function() {
-        photos = [];
-        currentPhotoList = [];
+        // Fallback to localStorage
+        const galleryPhotos = JSON.parse(localStorage.getItem('galleryPhotos') || '[]');
+        photos = galleryPhotos.map(function(photo) {
+          return { 
+            id: photo.id,
+            src: photo.image, 
+            name: photo.title || photo.name || photo.src.split('/').pop(),
+            category: photo.category || 'all',
+            description: photo.description || ''
+          };
+        });
+        currentPhotoList = photos;
         setActiveNav();
         renderGallery();
       });

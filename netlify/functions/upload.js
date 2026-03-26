@@ -36,24 +36,37 @@ exports.handler = async function(event, context) {
         const dataEnd = part.lastIndexOf('\r\n');
         const fileData = part.substring(dataStart, dataEnd);
         
-        // Save file to uploads directory
-        const uploadsDir = path.join(__dirname, '../../uploads');
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
+        // For Netlify, we'll store files in the /tmp directory and return base64 data
+        // In production, you'd want to use a real storage service like AWS S3
+        const tempDir = '/tmp';
+        const filePath = path.join(tempDir, uniqueFilename);
+        
+        try {
+          fs.writeFileSync(filePath, Buffer.from(fileData, 'binary'));
+        } catch (err) {
+          // If we can't write to /tmp, we'll just use base64 data
+          console.log('Could not write to temp directory, using base64');
         }
         
-        const filePath = path.join(uploadsDir, uniqueFilename);
-        fs.writeFileSync(filePath, Buffer.from(fileData, 'binary'));
+        // Create a data URL for the image (this will be stored in localStorage for now)
+        const mimeType = filename.split('.').pop().toLowerCase();
+        const mimeTypes = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp'
+        };
         
-        // Create public URL
-        const publicUrl = `/uploads/${uniqueFilename}`;
+        const base64Data = Buffer.from(fileData, 'binary').toString('base64');
+        const dataUrl = `data:${mimeTypes[mimeType] || 'image/jpeg'};base64,${base64Data}`;
         
         uploadedFiles.push({
           id: timestamp.toString(),
           name: filename,
-          src: publicUrl,
+          src: dataUrl, // Using data URL for now
           size: fileData.length,
-          type: filename.split('.').pop().toLowerCase(),
+          type: mimeType,
           uploadedAt: new Date().toISOString()
         });
       }
