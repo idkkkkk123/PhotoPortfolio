@@ -10,9 +10,6 @@
   "dependencies": {
     "busboy": "^1.6.0"
   },
-  "devDependencies": {
-    "http.server": "^0.1.0"
-  },
   "keywords": ["photography", "portfolio", "netlify", "static-site"],
   "author": "Photography Portfolio",
   "license": "MIT"
