@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="top-loader" id="topLoader"></div>
+
+  <nav class="nav glass">
+    <div class="nav-container">
+      <a class="nav-btn" href="index.html">Home</a>
+      <a class="nav-btn" href="gallery.html">Gallery</a>
+      <a class="nav-btn" href="albums.html">Albums</a>
+      <a class="nav-btn active" href="portfolio.html">Portfolio</a>
+    </div>
+  </nav>
+
+  <main class="container page-main">
+    <section id="portfolio">
+      <div class="section-header">
+        <h2>Portfolio</h2>
+      </div>
+      
+      <div class="empty-state" id="portfolioEmpty">
+        <div class="empty-state-icon">📸</div>
+        <div class="empty-state-text">Portfolio coming soon</div>
+        <div class="empty-state-hint">This section is under development. Check back later for portfolio items.</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="common.js"></script>
+  <script>
+    // Basic portfolio page functionality
+    document.addEventListener('DOMContentLoaded', () => {
+      setActiveNav();
+    });
+  </script>
+</body>
+</html>
