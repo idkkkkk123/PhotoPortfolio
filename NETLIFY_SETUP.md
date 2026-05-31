@@ -69,7 +69,7 @@ This error means **Identity is turned off** on Netlify. The admin login cannot w
 
 **Check it worked:** open  
 https://photoportfolioweb.netlify.app/.netlify/identity  
-in a browser. You should see JSON text, **not** a 404 page.
+in a browser. You should **not** get a 404. A **401** message is normal and means Identity is enabled.
 
 ### 3. Enable Git Gateway (CMS → GitHub)
 
@@ -156,7 +156,8 @@ If JSON has photos but the gallery is empty, hard-refresh the page or check the 
 |---------|-----|
 | Admin shows old “Admin Panel” home page, not CMS | Deploy this repo version; folder `admin-bbpews098ge8ht4ez4xdeg/` must exist on GitHub. |
 | “Failed to load config.yml” | Open the exact admin URL above; `config.yml` must sit next to `index.html` in that folder. |
-| “Failed to load settings from /.netlify/identity” | **Enable Identity** on the Netlify site (step 2 above). |
+| “Failed to load settings from /.netlify/identity” | **Enable Identity** on the Netlify site (step 2 above). If Identity is already on, hard-refresh admin (Ctrl+F5). |
+| Admin says Identity off but you enabled it | False alarm from an old check — redeploy latest `main`; 401 on `/.netlify/identity` means Identity **is** on. |
 | Login works but Publish fails | Enable **Git Gateway**; confirm repo branch is `main`. |
 | Friend never got invite | Resend from **Identity → Invite users**; check spam folder. |
 | Changes never appear on site | Click **Publish** in CMS; wait for deploy; check `photos/gallery.json` on GitHub. |

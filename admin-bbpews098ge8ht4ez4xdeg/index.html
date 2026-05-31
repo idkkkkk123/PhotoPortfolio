@@ -186,8 +186,15 @@
 
       function checkIdentityEnabled() {
         return fetch('/.netlify/identity', { cache: 'no-store' })
-          .then(function (res) { return res.ok; })
-          .catch(function () { return false; });
+          .then(function (res) {
+            // 404 = Identity not enabled on this Netlify site.
+            // 401/200 = Identity is on (401 is normal before login).
+            if (res.status === 404) return false;
+            return res.status === 200 || res.status === 401;
+          })
+          .catch(function () {
+            return !!window.netlifyIdentity;
+          });
       }
 
       loadCmsScripts()
