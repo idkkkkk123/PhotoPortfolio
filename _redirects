@@ -1,1 +1,1 @@
-/*    /index.html   404
+# Do not SPA-fallback JSON or image paths (public site is static HTML + JSON).

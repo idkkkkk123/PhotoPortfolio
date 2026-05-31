@@ -1,4 +1,5 @@
-# Same CMS config as admin-bbpews098ge8ht4ez4xdeg/ (secret URL). Prefer the secret URL in production.
+# Netlify CMS — edits the same JSON files the public site reads.
+# Public: gallery.html, albums.html, portfolio.html → photos/*.json
 
 backend:
   name: git-gateway
