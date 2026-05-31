@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <script src="identity-invite.js"></script>
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photography Portfolio</title>
@@ -232,6 +233,10 @@
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && infoModal.classList.contains('active')) infoModal.classList.remove('active'); });
     </script>
 
-    <!-- Invite links with #invite_token are redirected to invite.html by identity-invite.js -->
+    <script>
+      if (window.netlifyIdentity && (window.location.hash || '').includes('invite_token')) {
+        window.netlifyIdentity.init();
+      }
+    </script>
 </body>
 </html>

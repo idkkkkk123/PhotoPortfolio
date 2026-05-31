@@ -92,32 +92,48 @@ You do **not** create passwords in the code. You invite people by email in Netli
 
 ### 4b. Accept invites on the **free** plan (no Pro)
 
-You do **not** need Pro to customize email templates. Use these steps instead:
+There is **no** separate “Identity Site URL” setting on the free plan (sorry — earlier docs were wrong). Pro is only needed to edit email templates **inside** the Netlify UI. You can still accept invites for free.
 
-**A. Set Identity “Site URL” (free, one time)**
+#### Where to find Identity in Netlify
 
-1. Netlify → site → **Identity** → **Settings** (or **Identity configuration**).
-2. Find **Site URL** (sometimes under “Identity settings” / “URLs”).
-3. Set it to exactly:  
-   `https://photoportfolioweb.netlify.app/invite.html`  
-   (not just the homepage).
-4. **Save**.
+1. Go to [https://app.netlify.com](https://app.netlify.com)
+2. Click your site **photoportfolioweb** (the site card or name in the list).
+3. Open **Site configuration** or **Project configuration** (top tabs or left sidebar — wording varies).
+4. In the left menu, click **Identity** (under “Access” / “Security”, or in the main list).
+5. You should see sections like:
+   - **Users** — list of accounts; **Invite users** button
+   - **Registration** — “Invite only” (you already set this)
+   - **Emails** — may show Pro upsell for editing templates (you can ignore if you use the steps below)
+   - **Services** — enable **Git Gateway** here
 
-Default invite emails will then send people to `invite.html` with the token, where the site opens **set password**.
+If you do not see **Identity**, Identity may not be enabled yet — look for **Enable Identity** on that page first.
 
-**B. Send a new invite**
+#### Free way to accept an invite (use the full link)
 
-1. **Identity** → **Invite users** → your email → send.
-2. In the email, **right‑click** “Accept the invite” → **Copy link** (don’t just click if click fails).
-3. Paste the full link into the browser address bar.
-4. The URL should contain `invite_token` or `invite.html` — then choose your password in the popup.
+1. **Identity** → **Invite users** → send invite to your email.
+2. Open the email. **Do not only click the button** if it sends you to the homepage with no password screen.
+3. **Right‑click** “Accept the invite” → **Copy link** (Chrome/Edge/Firefox) or “Copy link address”.
+4. Paste into the browser address bar and press Enter.
+5. The URL should look like one of these:
+   - `https://photoportfolioweb.netlify.app/#invite_token=...`
+   - `https://photoportfolioweb.netlify.app/invite.html#invite_token=...`
+6. The site should open **invite.html** or show a **Sign up / set password** popup. **You choose the password** — none is emailed.
+7. Then log in at:  
+   https://photoportfolioweb.netlify.app/admin-bbpews098ge8ht4ez4xdeg/
 
-**C. If you already clicked a broken link**
+#### Optional: custom invite template path (only if NOT grayed out)
 
-1. **Identity** → **Invite users** → send a **fresh** invite (old tokens expire).
-2. Or **Identity** → **Users** → your user → **Send password recovery** (if the user row exists).
+This repo includes `email-templates/invitation.html` (links to `invite.html`). On some accounts, under **Identity → Emails**, you can set **Invite template** path to:
 
-**You are not given a password in the email** — you **create** it on the invite / signup screen.
+`/email-templates/invitation.html`
+
+without upgrading. If that field is locked behind Pro, skip it and use **Copy link** above.
+
+#### If invite still fails
+
+1. **Identity** → **Users** → delete half‑finished user (if any) → **Invite users** again.
+2. Or **Users** → your email → **Send password recovery** → set password from that email.
+3. Confirm main site URL under **Site configuration → General → Site details** is `photoportfolioweb.netlify.app`.
 
 **For your friend (photographer):**
 
