@@ -123,7 +123,15 @@
     border-radius: 4px;
     font-size: 0.75rem;
     letter-spacing: -2px;
-    pointer-events: none;
+    cursor: grab;
+}
+
+.admin-drag-handle:active {
+    cursor: grabbing;
+}
+
+.admin-gallery-grid .gallery-item {
+    cursor: pointer;
 }
 
 .admin-gallery-moves {

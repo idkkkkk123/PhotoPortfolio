@@ -60,6 +60,7 @@
         <div class="lightbox-info-row"><span class="lightbox-info-label">Filename</span><span class="lightbox-info-val" id="lbInfoName">—</span></div>
         <div class="lightbox-info-row"><span class="lightbox-info-label">Resolution</span><span class="lightbox-info-val" id="lbInfoRes">—</span></div>
         <div class="lightbox-info-row"><span class="lightbox-info-label">Aspect Ratio</span><span class="lightbox-info-val" id="lbInfoAspect">—</span></div>
+        <div class="lightbox-info-row"><span class="lightbox-info-label">Date</span><span class="lightbox-info-val" id="lbInfoDate">—</span></div>
         <div class="lightbox-info-row"><span class="lightbox-info-label">Format</span><span class="lightbox-info-val" id="lbInfoFormat">—</span></div>
       </div>
     </div>
@@ -196,9 +197,11 @@
 
       // Info panel
       document.getElementById('lbInfoName').textContent = photo.name || 'Untitled';
-      document.getElementById('lbInfoSize').textContent = '—';
-      document.getElementById('lbInfoDate').textContent = photo.date ? new Date(photo.date).toLocaleDateString() : '—';
       document.getElementById('lbInfoFormat').textContent = detectFormat(photo);
+      var dateEl = document.getElementById('lbInfoDate');
+      if (dateEl) {
+        dateEl.textContent = photo.date ? new Date(photo.date).toLocaleDateString() : '—';
+      }
 
       // Resolution & aspect ratio (need image load)
       const tmpImg = new Image();
