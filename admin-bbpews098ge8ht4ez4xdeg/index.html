@@ -1,242 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="robots" content="noindex, nofollow" />
-  <title>Photo site admin</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: "Outfit", system-ui, -apple-system, sans-serif;
-      background: #f4f4f5;
-      color: #18181b;
-    }
-    .admin-gate {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-    }
-    .admin-gate-card {
-      max-width: 420px;
-      width: 100%;
-      background: #fff;
-      border-radius: 16px;
-      padding: 2rem;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-      text-align: center;
-    }
-    .admin-gate-card h1 {
-      margin: 0 0 0.75rem;
-      font-size: 1.5rem;
-      font-weight: 600;
-    }
-    .admin-gate-card p {
-      margin: 0 0 1.25rem;
-      color: #52525b;
-      line-height: 1.5;
-      font-size: 0.95rem;
-    }
-    .admin-gate-btn {
-      display: inline-block;
-      width: 100%;
-      padding: 0.85rem 1.25rem;
-      border: none;
-      border-radius: 10px;
-      background: #18181b;
-      color: #fff;
-      font-size: 1rem;
-      font-weight: 500;
-      cursor: pointer;
-    }
-    .admin-gate-btn:hover { background: #27272a; }
-    .admin-gate-error {
-      margin-top: 1rem;
-      color: #b91c1c;
-      font-size: 0.875rem;
-      line-height: 1.4;
-    }
-    .admin-gate-loading {
-      margin-top: 1rem;
-      color: #71717a;
-      font-size: 0.875rem;
-    }
-    .admin-gate[hidden] { display: none !important; }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Visual Stories — Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css?v=3">
+  <link rel="stylesheet" href="admin-styles.css">
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script src="/identity-invite.js"></script>
+  <script src="admin-api.js"></script>
+  <script src="admin-auth.js"></script>
 </head>
 <body>
-  <div id="admin-gate" class="admin-gate">
-    <div class="admin-gate-card">
-      <h1>Photo site admin</h1>
-      <p>Log in with your Netlify invite to edit gallery, albums, and portfolio. After login the editor loads here.</p>
-      <p id="admin-gate-loading" class="admin-gate-loading">Loading editor…</p>
-      <button type="button" class="admin-gate-btn" id="admin-login-btn" hidden>Log in</button>
-      <p id="admin-gate-error" class="admin-gate-error" hidden></p>
+  <nav class="nav glass">
+    <div class="nav-container">
+      <a class="nav-btn active" href="index.html">Home</a>
+      <a class="nav-btn" href="upload.html">Upload</a>
+      <a class="nav-btn" href="gallery.html">Gallery</a>
+      <a class="nav-btn" href="display.html">Display</a>
+      <a class="nav-btn" href="albums.html">Albums</a>
+      <a class="nav-btn" href="../index.html">View site</a>
+      <button type="button" class="nav-btn" id="admin-logout-btn" style="margin-left: auto; border: none; background: transparent; cursor: pointer;">Log out</button>
     </div>
-  </div>
+  </nav>
+
+  <section class="hero" id="hero">
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+    <div class="hero-orb hero-orb-3"></div>
+    <div class="hero-grain"></div>
+    <div class="decorative-element decorative-element-1"></div>
+    <div class="decorative-element decorative-element-2"></div>
+    <div class="hero-content">
+      <h1>Visual Stories <span style="font-size: 0.45em; font-weight: 400; letter-spacing: 0.12em;">[ADMIN]</span></h1>
+      <p>Manage photos with the same look as your public site — changes go live for every visitor.</p>
+    </div>
+  </section>
+
+  <main class="container page-main">
+    <section>
+      <div class="section-header">
+        <h2>Admin panel</h2>
+      </div>
+      <div class="admin-hub-grid">
+        <a href="upload.html" class="admin-hub-card">
+          <span class="admin-hub-icon">⬆</span>
+          <h3>Upload</h3>
+          <p>Add new photos to the gallery</p>
+        </a>
+        <a href="gallery.html" class="admin-hub-card">
+          <span class="admin-hub-icon">🖼</span>
+          <h3>Gallery</h3>
+          <p>View, add, or remove gallery photos</p>
+        </a>
+        <a href="display.html" class="admin-hub-card">
+          <span class="admin-hub-icon">✦</span>
+          <h3>Display</h3>
+          <p>Customize the home page display</p>
+        </a>
+        <a href="albums.html" class="admin-hub-card">
+          <span class="admin-hub-icon">📁</span>
+          <h3>Albums</h3>
+          <p>Organize photos into albums</p>
+        </a>
+      </div>
+      <p class="admin-hub-note">
+        <a href="cms.html">Advanced editor (Netlify CMS)</a> — optional JSON/portfolio editing.
+      </p>
+    </section>
+  </main>
+
+  <style>
+    .admin-hub-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    .admin-hub-card {
+      display: block;
+      padding: 1.5rem;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .admin-hub-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+    .admin-hub-icon { font-size: 1.75rem; display: block; margin-bottom: 0.75rem; }
+    .admin-hub-card h3 { margin: 0 0 0.35rem; font-family: "Cormorant Garamond", serif; font-size: 1.35rem; }
+    .admin-hub-card p { margin: 0; font-size: 0.9rem; opacity: 0.8; }
+    .admin-hub-note { font-size: 0.9rem; opacity: 0.75; }
+    .admin-hub-note a { color: inherit; }
+  </style>
 
   <script>
-    window.CMS_MANUAL_INIT = true;
-
-    (function () {
-      const CMS_SCRIPT_URLS = [
-        'https://cdn.jsdelivr.net/npm/netlify-cms-app@2.15.72/dist/netlify-cms-app.js',
-        'https://unpkg.com/netlify-cms-app@2.15.72/dist/netlify-cms-app.js',
-        'https://cdn.jsdelivr.net/npm/decap-cms@3.1.11/dist/decap-cms.js'
-      ];
-
-      const gate = document.getElementById('admin-gate');
-      const loginBtn = document.getElementById('admin-login-btn');
-      const loadingEl = document.getElementById('admin-gate-loading');
-      const errorEl = document.getElementById('admin-gate-error');
-      let cmsStarted = false;
-      let identityReady = false;
-
-      function showError(msg) {
-        loadingEl.hidden = true;
-        errorEl.hidden = false;
-        errorEl.textContent = msg;
-        loginBtn.hidden = false;
-      }
-
-      function showLoginButton() {
-        loadingEl.hidden = true;
-        loginBtn.hidden = false;
-      }
-
-      function hideGate() {
-        gate.hidden = true;
-      }
-
-      function cmsAvailable() {
-        return window.CMS && typeof window.CMS.init === 'function';
-      }
-
-      function startCms() {
-        if (cmsStarted) return;
-        if (!cmsAvailable()) {
-          showError('Editor is still loading. Wait a moment and click Log in again.');
-          return;
-        }
-        cmsStarted = true;
-        hideGate();
-        window.CMS.init();
-      }
-
-      function setupIdentity() {
-        const identity = window.netlifyIdentity;
-        if (!identity) {
-          showError(
-            'Netlify Identity is not enabled. In Netlify: Site configuration → Identity → Enable Identity, then refresh.'
-          );
-          return;
-        }
-
-        const inviteHint = document.createElement('p');
-        inviteHint.className = 'admin-gate-loading';
-        inviteHint.hidden = true;
-        inviteHint.textContent = 'Invite link detected — set your new password in the popup (you choose it; none is emailed).';
-        document.querySelector('.admin-gate-card').appendChild(inviteHint);
-
-        identity.on('init', function (user) {
-          identityReady = true;
-          if (user) {
-            startCms();
-            return;
-          }
-          if (window.identityHashType && window.identityHashType() === 'invite') {
-            inviteHint.hidden = false;
-            loadingEl.hidden = true;
-            identity.open('signup');
-            return;
-          }
-          showLoginButton();
-        });
-
-        identity.on('login', function () {
-          startCms();
-        });
-
-        identity.on('logout', function () {
-          window.location.reload();
-        });
-
-        loginBtn.addEventListener('click', function () {
-          if (window.openNetlifyIdentityModal) {
-            window.openNetlifyIdentityModal();
-          } else {
-            identity.open('login');
-          }
-        });
-
-        identity.init();
-      }
-
-      function loadScript(url) {
-        return new Promise(function (resolve, reject) {
-          const script = document.createElement('script');
-          script.src = url;
-          script.async = false;
-          script.onload = function () { resolve(url); };
-          script.onerror = function () { reject(new Error(url)); };
-          document.head.appendChild(script);
-        });
-      }
-
-      async function loadCmsScripts() {
-        for (const url of CMS_SCRIPT_URLS) {
-          try {
-            await loadScript(url);
-            if (cmsAvailable()) return true;
-          } catch (err) {
-            console.warn('CMS script failed:', url);
-          }
-        }
-        return cmsAvailable();
-      }
-
-      function checkIdentityEnabled() {
-        return fetch('/.netlify/identity', { cache: 'no-store' })
-          .then(function (res) {
-            // 404 = Identity not enabled on this Netlify site.
-            // 401/200 = Identity is on (401 is normal before login).
-            if (res.status === 404) return false;
-            return res.status === 200 || res.status === 401;
-          })
-          .catch(function () {
-            return !!window.netlifyIdentity;
-          });
-      }
-
-      loadCmsScripts()
-        .then(function (ok) {
-          if (!ok) {
-            showError(
-              'Editor script could not load (often blocked by ad blockers). Allow cdn.jsdelivr.net and unpkg.com, or try another browser.'
-            );
-            return;
-          }
-          return checkIdentityEnabled().then(function (identityOn) {
-            if (!identityOn) {
-              showError(
-                'Netlify Identity is not enabled on this site (that causes "Failed to load settings from /.netlify/identity"). In Netlify: open site photoportfolioweb → Identity → Enable Identity. Then Identity → Services → Git Gateway → Enable. See NETLIFY_SETUP.md in the repo.'
-              );
-              return;
-            }
-            loadingEl.textContent = 'Editor ready. Log in to continue.';
-            setupIdentity();
-          });
-        })
-        .catch(function () {
-          showError('Editor failed to load. Refresh the page or try another browser.');
-        });
-    })();
+    document.getElementById('admin-logout-btn').addEventListener('click', function () {
+      if (window.netlifyIdentity) window.netlifyIdentity.logout();
+    });
   </script>
 </body>
 </html>

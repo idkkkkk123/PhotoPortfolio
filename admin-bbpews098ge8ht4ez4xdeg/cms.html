@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Advanced editor (CMS)</title>
+  <link href="config.yml" type="text/yaml" rel="cms-config-url" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Outfit", system-ui, -apple-system, sans-serif;
+      background: #f4f4f5;
+      color: #18181b;
+    }
+    .admin-gate {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .admin-gate-card {
+      max-width: 420px;
+      width: 100%;
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+    .admin-gate-card h1 { margin: 0 0 0.75rem; font-size: 1.5rem; font-weight: 600; }
+    .admin-gate-card p { margin: 0 0 1.25rem; color: #52525b; line-height: 1.5; font-size: 0.95rem; }
+    .admin-gate-btn {
+      display: inline-block;
+      width: 100%;
+      padding: 0.85rem 1.25rem;
+      border: none;
+      border-radius: 10px;
+      background: #18181b;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .admin-gate-btn:hover { background: #27272a; }
+    .admin-gate-error { margin-top: 1rem; color: #b91c1c; font-size: 0.875rem; line-height: 1.4; }
+    .admin-gate-loading { margin-top: 1rem; color: #71717a; font-size: 0.875rem; }
+    .admin-gate[hidden] { display: none !important; }
+    .admin-gate-back { display: inline-block; margin-top: 1rem; color: #52525b; font-size: 0.9rem; }
+  </style>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="/identity-invite.js"></script>
+</head>
+<body>
+  <div id="admin-gate" class="admin-gate">
+    <div class="admin-gate-card">
+      <h1>Netlify CMS editor</h1>
+      <p>Optional advanced editor. For day-to-day uploads use the <a href="index.html">Visual Stories admin</a>.</p>
+      <p id="admin-gate-loading" class="admin-gate-loading">Loading editor…</p>
+      <button type="button" class="admin-gate-btn" id="admin-login-btn" hidden>Log in</button>
+      <p id="admin-gate-error" class="admin-gate-error" hidden></p>
+      <a class="admin-gate-back" href="index.html">← Back to admin home</a>
+    </div>
+  </div>
+
+  <script>
+    window.CMS_MANUAL_INIT = true;
+    (function () {
+      const CMS_SCRIPT_URLS = [
+        'https://cdn.jsdelivr.net/npm/netlify-cms-app@2.15.72/dist/netlify-cms-app.js',
+        'https://unpkg.com/netlify-cms-app@2.15.72/dist/netlify-cms-app.js',
+        'https://cdn.jsdelivr.net/npm/decap-cms@3.1.11/dist/decap-cms.js'
+      ];
+      const gate = document.getElementById('admin-gate');
+      const loginBtn = document.getElementById('admin-login-btn');
+      const loadingEl = document.getElementById('admin-gate-loading');
+      const errorEl = document.getElementById('admin-gate-error');
+      let cmsStarted = false;
+
+      function showError(msg) {
+        loadingEl.hidden = true;
+        errorEl.hidden = false;
+        errorEl.textContent = msg;
+        loginBtn.hidden = false;
+      }
+      function hideGate() { gate.hidden = true; }
+      function cmsAvailable() { return window.CMS && typeof window.CMS.init === 'function'; }
+      function startCms() {
+        if (cmsStarted) return;
+        if (!cmsAvailable()) {
+          showError('Editor is still loading. Wait a moment and click Log in again.');
+          return;
+        }
+        cmsStarted = true;
+        hideGate();
+        window.CMS.init();
+      }
+      function setupIdentity() {
+        const identity = window.netlifyIdentity;
+        if (!identity) {
+          showError('Netlify Identity is not enabled on this site.');
+          return;
+        }
+        identity.on('init', function (user) {
+          if (user) { startCms(); return; }
+          if (window.identityHashType && window.identityHashType() === 'invite') {
+            loadingEl.hidden = true;
+            identity.open('signup');
+            return;
+          }
+          loadingEl.hidden = true;
+          loginBtn.hidden = false;
+        });
+        identity.on('login', startCms);
+        identity.on('logout', function () { window.location.reload(); });
+        loginBtn.addEventListener('click', function () {
+          if (window.openNetlifyIdentityModal) window.openNetlifyIdentityModal();
+          else identity.open('login');
+        });
+        identity.init();
+      }
+      function loadScript(url) {
+        return new Promise(function (resolve, reject) {
+          const script = document.createElement('script');
+          script.src = url;
+          script.async = false;
+          script.onload = function () { resolve(url); };
+          script.onerror = function () { reject(new Error(url)); };
+          document.head.appendChild(script);
+        });
+      }
+      async function loadCmsScripts() {
+        for (const url of CMS_SCRIPT_URLS) {
+          try {
+            await loadScript(url);
+            if (cmsAvailable()) return true;
+          } catch (err) { console.warn('CMS script failed:', url); }
+        }
+        return cmsAvailable();
+      }
+      loadCmsScripts().then(function (ok) {
+        if (!ok) {
+          showError('Editor script could not load. Allow cdn.jsdelivr.net and unpkg.com.');
+          return;
+        }
+        loadingEl.textContent = 'Editor ready. Log in to continue.';
+        setupIdentity();
+      }).catch(function () {
+        showError('Editor failed to load. Refresh the page.');
+      });
+    })();
+  </script>
+</body>
+</html>

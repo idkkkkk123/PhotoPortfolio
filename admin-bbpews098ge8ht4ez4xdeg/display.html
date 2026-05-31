@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Display Editor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="display-editor.css">
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="/identity-invite.js"></script>
+  <script src="admin-auth.js"></script>
+</head>
+<body>
+  <nav class="nav glass">
+    <div class="nav-container">
+      <a class="nav-btn" href="index.html">Home</a>
+      <a class="nav-btn" href="gallery.html">Gallery</a>
+      <a class="nav-btn" href="upload.html">Upload</a>
+      <a class="nav-btn active" href="display.html">Display</a>
+      <a class="nav-btn" href="albums.html">Albums</a>
+      <a class="nav-btn" href="../portfolio.html">Portfolio</a>
+    </div>
+  </nav>
+
+  <main class="de-main">
+    <!-- Top Bar -->
+    <div class="de-topbar">
+      <div class="de-topbar-left">
+        <h2>Display Editor</h2>
+        <input type="text" id="displayName" placeholder="Untitled Collage">
+      </div>
+      <div class="de-topbar-center">
+        <button id="undoBtn" class="de-tb-btn" title="Undo (Ctrl+Z)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h13a4 4 0 0 1 0 8H7"/><polyline points="7 6 3 10 7 14"/></svg>
+        </button>
+        <button id="redoBtn" class="de-tb-btn" title="Redo (Ctrl+Shift+Z)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10H8a4 4 0 0 0 0 8h9"/><polyline points="17 6 21 10 17 14"/></svg>
+        </button>
+        <div class="de-tb-sep"></div>
+        <button id="newDisplayBtn" class="de-tb-btn" title="New">New</button>
+        <button id="saveDisplayBtn" class="de-tb-btn" title="Save (Ctrl+S)">Save</button>
+        <span id="saveIndicator" class="de-save-indicator saved">Saved</span>
+        <button id="loadDisplayBtn" class="de-tb-btn" title="Open">Open</button>
+        <button id="exportBtn" class="de-tb-btn" title="Export">Export</button>
+        <button id="saveToPortfolioBtn" class="de-tb-btn de-tb-btn-accent" title="Add to Portfolio">Portfolio</button>
+      </div>
+      <div class="de-topbar-right">
+        <label class="de-snap-toggle" title="Snap to Grid">
+          <input type="checkbox" id="gridSnapToggle">
+          <span>Grid</span>
+        </label>
+        <input type="number" id="gridSize" value="20" min="5" max="100" class="de-grid-input" title="Grid size">
+      </div>
+    </div>
+
+    <!-- 3-Panel Workspace -->
+    <div class="de-workspace">
+
+      <!-- LEFT PANEL: Controls -->
+      <aside class="de-panel de-panel-left" id="leftPanel">
+        <div class="de-panel-scroll">
+
+          <!-- Properties Section -->
+          <div class="de-section">
+            <div class="de-section-title">Properties</div>
+            <div id="itemControls" class="de-props-empty">
+              <div class="de-props-placeholder">Select an item on the canvas</div>
+            </div>
+            <div id="itemPropsActive" style="display:none;">
+              <div class="de-prop-row">
+                <div class="de-prop-field"><label>X</label><input type="number" id="posX"></div>
+                <div class="de-prop-field"><label>Y</label><input type="number" id="posY"></div>
+              </div>
+              <div class="de-prop-row">
+                <div class="de-prop-field"><label>W</label><input type="number" id="sizeW"></div>
+                <div class="de-prop-field"><label>H</label><input type="number" id="sizeH"></div>
+              </div>
+              <div class="de-prop-single">
+                <label>Rotation</label>
+                <div class="de-slider-row">
+                  <input type="range" id="rotateSlider" min="0" max="360" value="0">
+                  <span id="rotateValue">0</span>
+                </div>
+              </div>
+              <div class="de-prop-single">
+                <label>Opacity</label>
+                <div class="de-slider-row">
+                  <input type="range" id="opacitySlider" min="0" max="100" value="100">
+                  <span id="opacityValue">100</span>
+                </div>
+              </div>
+              <div class="de-prop-single">
+                <label>Border Radius</label>
+                <div class="de-slider-row">
+                  <input type="range" id="radiusSlider" min="0" max="50" value="0">
+                  <span id="radiusValue">0</span>
+                </div>
+              </div>
+              <div class="de-prop-actions">
+                <button id="bringFrontBtn" class="de-sm-btn" title="Bring Forward">↑ Front</button>
+                <button id="sendBackBtn" class="de-sm-btn" title="Send Backward">↓ Back</button>
+                <button id="flipHBtn" class="de-sm-btn" title="Flip Horizontal">Flip H</button>
+                <button id="flipVBtn" class="de-sm-btn" title="Flip Vertical">Flip V</button>
+              </div>
+              <div class="de-prop-actions">
+                <button id="cropItemBtn" class="de-sm-btn" title="Crop Image" style="grid-column:1/-1;">Crop</button>
+              </div>
+              <button id="deleteItemBtn" class="de-delete-btn">Delete</button>
+            </div>
+          </div>
+
+          <!-- Filters Section -->
+          <div class="de-section">
+            <div class="de-section-title">Filters</div>
+            <div id="filterControls" style="display:none;">
+              <div class="de-prop-single">
+                <label>Brightness</label>
+                <div class="de-slider-row">
+                  <input type="range" id="brightnessSlider" min="0" max="200" value="100">
+                  <span id="brightnessValue">100</span>
+                </div>
+              </div>
+              <div class="de-prop-single">
+                <label>Contrast</label>
+                <div class="de-slider-row">
+                  <input type="range" id="contrastSlider" min="0" max="200" value="100">
+                  <span id="contrastValue">100</span>
+                </div>
+              </div>
+              <div class="de-prop-single">
+                <label>Saturate</label>
+                <div class="de-slider-row">
+                  <input type="range" id="saturateSlider" min="0" max="200" value="100">
+                  <span id="saturateValue">100</span>
+                </div>
+              </div>
+              <div class="de-prop-single">
+                <label>Grayscale</label>
+                <div class="de-slider-row">
+                  <input type="range" id="grayscaleSlider" min="0" max="100" value="0">
+                  <span id="grayscaleValue">0</span>
+                </div>
+              </div>
+              <div class="de-prop-single">
+                <label>Blur</label>
+                <div class="de-slider-row">
+                  <input type="range" id="blurSlider" min="0" max="20" value="0">
+                  <span id="blurValue">0</span>
+                </div>
+              </div>
+              <button id="resetFiltersBtn" class="de-sm-btn" style="width:100%;margin-top:6px;">Reset Filters</button>
+            </div>
+            <div id="filterPlaceholder" class="de-props-placeholder">Select an image to adjust</div>
+          </div>
+
+          <!-- Layers Section -->
+          <div class="de-section">
+            <div class="de-section-title">Layers</div>
+            <div id="layerList" class="de-layer-list"></div>
+          </div>
+
+          <!-- Canvas Settings -->
+          <div class="de-section">
+            <div class="de-section-title">Canvas</div>
+            <div class="de-prop-row">
+              <div class="de-prop-field"><label>Width</label><input type="number" id="canvasWidth" value="1920" min="100" max="7680"></div>
+              <div class="de-prop-field"><label>Height</label><input type="number" id="canvasHeight" value="1080" min="100" max="4320"></div>
+            </div>
+            <div class="de-prop-row" style="margin-top:0.35rem;">
+              <div class="de-prop-field" style="flex:1;">
+                <label>Preset</label>
+                <select id="canvasPreset" class="de-prop-select">
+                  <option value="">Custom</option>
+                  <option value="screen">My Screen</option>
+                  <option value="1920x1080">1920 × 1080 (FHD)</option>
+                  <option value="2560x1440">2560 × 1440 (QHD)</option>
+                  <option value="3840x2160">3840 × 2160 (4K)</option>
+                  <option value="1200x800">1200 × 800</option>
+                  <option value="1080x1080">1080 × 1080 (Square)</option>
+                  <option value="1080x1350">1080 × 1350 (Portrait)</option>
+                  <option value="1200x628">1200 × 628 (Social)</option>
+                </select>
+              </div>
+            </div>
+            <div class="de-prop-row" style="margin-top:0.35rem;">
+              <div class="de-prop-field">
+                <label>Background</label>
+                <input type="color" id="canvasBgColor" value="#ffffff" class="de-color-input">
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </aside>
+
+      <!-- CENTER: Canvas -->
+      <div class="de-canvas-area">
+        <div class="de-page-tabs">
+          <div id="pageTabs" class="de-page-tabs-list"></div>
+          <button id="addPageBtn" class="de-add-page-btn">+ Page</button>
+        </div>
+        <div class="de-canvas-wrapper">
+          <div class="de-canvas-outer" id="canvasOuter">
+            <div id="displayCanvas" class="de-canvas"></div>
+            <div class="de-canvas-size-label" id="canvasSizeLabel">1200 × 800</div>
+            <div class="de-canvas-resize de-canvas-resize-se" data-corner="se"></div>
+            <div class="de-canvas-resize de-canvas-resize-sw" data-corner="sw"></div>
+            <div class="de-canvas-resize de-canvas-resize-ne" data-corner="ne"></div>
+            <div class="de-canvas-resize de-canvas-resize-nw" data-corner="nw"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL: Gallery -->
+      <aside class="de-panel de-panel-right" id="rightPanel">
+        <div class="de-panel-scroll">
+
+          <!-- Upload Area -->
+          <div class="de-section">
+            <div class="de-section-title">Add Photo</div>
+            <div class="de-upload-zone" id="uploadArea">
+              <input type="file" id="photoFileInput" accept="image/*" multiple style="display:none;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+              <span>Drop or click to upload</span>
+            </div>
+          </div>
+
+          <!-- Gallery Photos -->
+          <div class="de-section">
+            <div class="de-section-title">Gallery</div>
+            <div id="galleryPreview" class="de-gallery-grid"></div>
+          </div>
+
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- Load Display Modal (with previews) -->
+  <div id="loadModal" class="modal">
+    <div class="modal-content" style="max-width:640px;">
+      <button class="modal-close-btn" id="closeLoadModal">&times;</button>
+      <h3>Open Display</h3>
+      <div id="displaysList" class="de-load-grid"></div>
+      <div class="empty-state" id="loadsEmpty" style="display:none;">
+        <div class="empty-state-icon">🖼️</div>
+        <div class="empty-state-text">No saved displays</div>
+      </div>
+      <div class="modal-buttons" style="margin-top:1rem;">
+        <button id="cancelLoadModal" class="modal-btn modal-btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Modal (redesigned) -->
+  <div id="exportModal" class="modal">
+    <div class="modal-content de-export-modal">
+      <button class="modal-close-btn" id="closeExportModal">&times;</button>
+      <h3>Export</h3>
+      <div class="de-export-preview" id="exportPreview">
+        <div class="de-export-preview-inner" id="exportPreviewInner"></div>
+        <div class="de-export-res" id="exportResLabel">1200 × 800</div>
+      </div>
+      <div class="de-export-grid">
+        <div class="de-export-field">
+          <label>Format</label>
+          <select id="exportFormat" class="de-export-select">
+            <option value="png">PNG</option>
+            <option value="jpg">JPG</option>
+            <option value="webp">WEBP</option>
+            <option value="pdf">PDF</option>
+            <option value="tiff">TIFF</option>
+          </select>
+        </div>
+        <div class="de-export-field">
+          <label>Scale</label>
+          <select id="exportScale" class="de-export-select">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="3">3×</option>
+          </select>
+        </div>
+        <div class="de-export-field">
+          <label>DPI</label>
+          <select id="exportDpi" class="de-export-select">
+            <option value="72">72</option>
+            <option value="150">150</option>
+            <option value="300" selected>300</option>
+            <option value="600">600</option>
+          </select>
+        </div>
+        <div class="de-export-field" id="exportQualityField">
+          <label>Quality <span id="exportQualityVal" class="de-export-qval">92%</span></label>
+          <input type="range" id="exportQuality" min="10" max="100" value="92" class="de-export-range">
+        </div>
+      </div>
+      <div class="de-export-options">
+        <label class="de-export-check" id="exportTransparencyRow">
+          <input type="checkbox" id="exportTransparent">
+          <span>Transparent background</span>
+        </label>
+        <div id="exportPdfRow" style="display:none;">
+          <label>Page Size</label>
+          <select id="exportPdfSize" class="de-export-select" style="margin-top:0.25rem;">
+            <option value="auto">Auto (Canvas)</option>
+            <option value="a4">A4</option>
+            <option value="letter">Letter</option>
+            <option value="a3">A3</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-buttons" style="margin-top:1rem;">
+        <button id="cancelExportModal" class="modal-btn modal-btn-secondary">Cancel</button>
+        <button id="confirmExportBtn" class="modal-btn modal-btn-primary">Export</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Display Confirmation Modal -->
+  <div id="newConfirmModal" class="modal">
+    <div class="modal-content" style="max-width:380px;">
+      <h3 style="margin-bottom:0.75rem;">Unsaved Changes</h3>
+      <p style="font-size:0.88rem;color:#71717a;line-height:1.6;margin-bottom:1.25rem;">You have unsaved work on the current display. What would you like to do?</p>
+      <div style="display:flex;flex-direction:column;gap:0.5rem;">
+        <button id="newConfirmSave" class="modal-btn modal-btn-primary" style="flex:none;">Save &amp; Create New</button>
+        <button id="newConfirmDiscard" class="modal-btn modal-btn-secondary" style="flex:none;border-color:#fecaca;color:#dc2626;">Discard &amp; Create New</button>
+        <button id="newConfirmCancel" class="modal-btn modal-btn-secondary" style="flex:none;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Portfolio Save Modal -->
+  <div id="portfolioModal" class="modal">
+    <div class="modal-content" style="max-width:440px;">
+      <button class="modal-close-btn" id="closePortfolioModal">&times;</button>
+      <h3>Add to Portfolio</h3>
+      <div class="de-portfolio-preview" id="portfolioPreview"></div>
+      <div style="margin-bottom:0.75rem;">
+        <label style="font-size:0.72rem;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:0.25rem;">Title</label>
+        <input type="text" id="portfolioTitle" class="modal-input" style="margin-bottom:0;" placeholder="Display title">
+      </div>
+      <div style="margin-bottom:0.75rem;">
+        <label style="font-size:0.72rem;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:0.25rem;">Description</label>
+        <textarea id="portfolioDesc" class="modal-input" style="margin-bottom:0;min-height:80px;resize:vertical;" placeholder="Add a description..."></textarea>
+      </div>
+      <div class="modal-buttons">
+        <button id="cancelPortfolioModal" class="modal-btn modal-btn-secondary">Cancel</button>
+        <button id="confirmPortfolioBtn" class="modal-btn modal-btn-primary">Add to Portfolio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Crop Modal -->
+  <div id="cropModal" class="modal">
+    <div class="modal-content" style="max-width:600px;">
+      <button class="modal-close-btn" id="closeCropModal">&times;</button>
+      <h3>Crop Image</h3>
+      <div class="de-crop-container" id="cropContainer">
+        <img id="cropImage" src="" alt="Crop preview">
+        <div class="de-crop-box" id="cropBox"></div>
+      </div>
+      <div class="modal-buttons" style="margin-top:1rem;">
+        <button id="cancelCropModal" class="modal-btn modal-btn-secondary">Cancel</button>
+        <button id="confirmCropBtn" class="modal-btn modal-btn-primary">Apply Crop</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="display-editor.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 const { getFile, corsHeaders, getToken } = require('./lib/github-repo');
 
-const FILE_PATH = 'photos/gallery.json';
+const FILE_PATH = 'photos/albums.json';
 
 exports.handler = async function (event) {
   if (event.httpMethod === 'OPTIONS') {
@@ -16,40 +16,29 @@ exports.handler = async function (event) {
       return {
         statusCode: 200,
         headers: corsHeaders(),
-        body: JSON.stringify({ success: true, photos: [] })
+        body: JSON.stringify({ success: true, albums: [] })
       };
     }
 
     const file = await getFile(token, FILE_PATH);
-    let photos = [];
+    let albums = [];
     if (file && file.content) {
       const parsed = JSON.parse(Buffer.from(file.content, 'base64').toString('utf8'));
-      if (Array.isArray(parsed)) photos = parsed;
-      else if (parsed && Array.isArray(parsed.photos)) photos = parsed.photos;
+      if (Array.isArray(parsed)) albums = parsed;
+      else if (parsed && Array.isArray(parsed.albums)) albums = parsed.albums;
     }
 
-    const normalized = photos.map(normalizePhoto);
     return {
       statusCode: 200,
       headers: corsHeaders(),
-      body: JSON.stringify({ success: true, photos: normalized, sha: file ? file.sha : null })
+      body: JSON.stringify({ success: true, albums })
     };
   } catch (error) {
-    console.error('load-photos:', error);
+    console.error('load-albums:', error);
     return {
       statusCode: 500,
       headers: corsHeaders(),
-      body: JSON.stringify({ success: false, photos: [], error: error.message })
+      body: JSON.stringify({ success: false, albums: [], error: error.message })
     };
   }
 };
-
-function normalizePhoto(p) {
-  return {
-    id: p.id || String(Date.now()),
-    name: p.name || p.title || 'Untitled',
-    src: p.src || p.image || '',
-    date: p.date || p.uploadedAt || new Date().toISOString(),
-    description: p.description || ''
-  };
-}

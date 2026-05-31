@@ -164,14 +164,25 @@ Netlify’s GitHub app must be allowed to **write** to the repo (CMS commits JSO
 ## Using the admin panel
 
 1. Open https://photoportfolioweb.netlify.app/admin-bbpews098ge8ht4ez4xdeg/
-2. **Log in** with the invited Netlify Identity account.
-3. Pick a collection:
-   - **Gallery Photos** → appears on `gallery.html`
-   - **Albums** → appears on `albums.html`
-   - **Portfolio** → appears on `portfolio.html`
-4. Add a photo → use the **Image** field (upload). Fill **Name**, **Date**, etc.
-5. Click **Publish** (top). Wait for Netlify **Deploys** to show **Published** (usually 1–2 min).
-6. Open the public page (hard refresh: Ctrl+F5) and confirm the photo appears.
+2. **Log in** with your Netlify Identity invite (email + password).
+3. Use the **Visual Stories** hub (same look as the public site):
+   - **Upload** — add photos to the gallery
+   - **Gallery** — view, add, or delete photos
+   - **Albums** — organize albums
+   - **Display** — home page display editor
+4. After upload/save, changes are written to `photos/gallery.json` (and uploads under `photos/uploads/`) via Netlify Functions. Wait ~1 minute, then hard-refresh the public page (Ctrl+F5).
+
+**Optional:** [Advanced editor (CMS)](https://photoportfolioweb.netlify.app/admin-bbpews098ge8ht4ez4xdeg/cms.html) for portfolio JSON and Decap CMS **Publish** workflow.
+
+### `GITHUB_TOKEN` (required for custom admin saves)
+
+In Netlify → **Site configuration** → **Environment variables**, add:
+
+| Variable | Value |
+|----------|--------|
+| `GITHUB_TOKEN` | GitHub personal access token with **repo** scope (write access to `idkkkkk123/PhotoPortfolio`) |
+
+Redeploy after adding. Without this, Upload/Gallery/Albums show an error when saving.
 
 ---
 
@@ -203,12 +214,12 @@ If JSON has photos but the gallery is empty, hard-refresh the page or check the 
 | Repo public | [raw gallery.json](https://raw.githubusercontent.com/idkkkkk123/PhotoPortfolio/main/photos/gallery.json) | JSON opens, not 404 |
 | Netlify data | `/photos/gallery.json` on your site | Same JSON |
 | Identity | `/.netlify/identity` | **401** or **200**, not **404** |
-| Admin | `/admin-bbpews098ge8ht4ez4xdeg/` | “Editor ready” → Log in → CMS |
-| Gallery | `gallery.html` | Shows photos after CMS **Publish** |
+| Admin | `/admin-bbpews098ge8ht4ez4xdeg/` | Visual Stories hub after login |
+| Gallery | `gallery.html` | Shows photos after admin upload/save |
 | Home portfolio | `index.html` (scroll down) | Same portfolio items as admin |
 | Second device | Open gallery on phone | Same photos as laptop |
 
-**Only upload here:** `/admin-bbpews098ge8ht4ez4xdeg/` (Netlify CMS). Do not use old `upload.html` paths.
+**Only upload here:** `/admin-bbpews098ge8ht4ez4xdeg/upload.html` (or Gallery → Add Photo). Do not use `photo-uploader.html` (local-only).
 
 ---
 
@@ -216,7 +227,8 @@ If JSON has photos but the gallery is empty, hard-refresh the page or check the 
 
 | Problem | Fix |
 |---------|-----|
-| Admin shows old “Admin Panel” home page, not CMS | Deploy this repo version; folder `admin-bbpews098ge8ht4ez4xdeg/` must exist on GitHub. |
+| Upload says GITHUB_TOKEN not set | Add `GITHUB_TOKEN` env var in Netlify and redeploy. |
+| Admin pages redirect to CMS only | Remove old `_redirects` rules; use latest `main`. |
 | “Failed to load config.yml” | Open the exact admin URL above; `config.yml` must sit next to `index.html` in that folder. |
 | “Failed to load settings from /.netlify/identity” | **Enable Identity** on the Netlify site (step 2 above). If Identity is already on, hard-refresh admin (Ctrl+F5). |
 | Admin says Identity off but you enabled it | False alarm from an old check — redeploy latest `main`; 401 on `/.netlify/identity` means Identity **is** on. |

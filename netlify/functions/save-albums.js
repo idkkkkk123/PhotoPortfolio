@@ -1,6 +1,6 @@
 const { getFile, putFile, corsHeaders, getToken } = require('./lib/github-repo');
 
-const FILE_PATH = 'photos/gallery.json';
+const FILE_PATH = 'photos/albums.json';
 
 exports.handler = async function (event) {
   if (event.httpMethod === 'OPTIONS') {
@@ -18,38 +18,30 @@ exports.handler = async function (event) {
         headers: corsHeaders(),
         body: JSON.stringify({
           success: false,
-          error: 'GITHUB_TOKEN is not set in Netlify. Add it under Site configuration → Environment variables.'
+          error: 'GITHUB_TOKEN is not set in Netlify environment variables.'
         })
       };
     }
 
     const body = JSON.parse(event.body);
-    let photos = Array.isArray(body) ? body : (body.photos || []);
-    photos = photos.map((p) => ({
-      id: p.id || String(Date.now() + Math.random()),
-      name: p.name || p.title || 'Untitled',
-      src: p.src || p.image || '',
-      date: p.date || p.uploadedAt || new Date().toISOString(),
-      description: p.description || ''
-    }));
-
+    const albums = Array.isArray(body) ? body : (body.albums || []);
     const file = await getFile(token, FILE_PATH);
-    const payload = JSON.stringify({ photos }, null, 2);
+    const payload = JSON.stringify({ albums }, null, 2);
     await putFile(
       token,
       FILE_PATH,
       payload,
-      `Admin: update gallery (${photos.length} photos)`,
+      `Admin: update albums (${albums.length})`,
       file ? file.sha : undefined
     );
 
     return {
       statusCode: 200,
       headers: corsHeaders(),
-      body: JSON.stringify({ success: true, count: photos.length })
+      body: JSON.stringify({ success: true, count: albums.length })
     };
   } catch (error) {
-    console.error('save-photos:', error);
+    console.error('save-albums:', error);
     return {
       statusCode: 500,
       headers: corsHeaders(),

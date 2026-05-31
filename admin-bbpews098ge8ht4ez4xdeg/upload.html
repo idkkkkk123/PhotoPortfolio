@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="admin-styles.css">
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="/identity-invite.js"></script>
+  <script src="admin-api.js"></script>
+  <script src="admin-auth.js"></script>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav glass">
+    <div class="nav-container">
+      <a class="nav-btn" href="index.html">Home</a>
+      <a class="nav-btn" href="gallery.html">Gallery</a>
+      <a class="nav-btn active" href="upload.html">Upload</a>
+      <a class="nav-btn" href="display.html">Display</a>
+      <a class="nav-btn" href="albums.html">Albums</a>
+      <a class="nav-btn" href="../portfolio.html">Portfolio</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container page-main">
+    <!-- Upload Section -->
+    <section id="upload">
+      <div class="section-header">
+        <h2>Upload Photos</h2>
+      </div>
+
+      <div class="upload-area glass" id="uploadArea">
+        <input type="file" id="fileInput" accept="image/*" multiple>
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">Click or drag to upload photos</div>
+        <div class="upload-hint">Select multiple files at once</div>
+      </div>
+
+      <!-- Preview Carousel -->
+      <div class="preview-carousel glass" id="previewCarousel" style="display:none;">
+        <div class="preview-toolbar">
+          <span class="preview-counter" id="previewCounter">1 / 1</span>
+          <div class="preview-toolbar-btns">
+            <div class="fit-toggle" id="fitToggle">
+              <button class="fit-toggle-btn active" data-fit="contain" type="button">Contain</button>
+              <button class="fit-toggle-btn" data-fit="cover" type="button">Cover</button>
+            </div>
+            <button id="clearCurrent" class="btn-action" type="button">Clear This</button>
+            <button id="saveAllToGallery" class="btn-action btn-action-primary" type="button">Save All to Gallery</button>
+          </div>
+        </div>
+        <div class="preview-viewport" id="previewViewport">
+          <button class="preview-nav preview-nav-prev" id="prevBtn" type="button">&#8249;</button>
+          <div class="preview-track" id="previewTrack"></div>
+          <button class="preview-nav preview-nav-next" id="nextBtn" type="button">&#8250;</button>
+        </div>
+        <div class="preview-dots" id="previewDots"></div>
+      </div>
+    </section>
+
+    <!-- Gallery Section -->
+    <section id="recent" style="margin-top: 4rem;">
+      <div class="section-header">
+        <h2>Recent Photos</h2>
+      </div>
+      <div class="filter-controls">
+        <label for="recentSortSelect">Sort by:</label>
+        <select id="recentSortSelect">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="sizeDesc">Largest File</option>
+          <option value="sizeAsc">Smallest File</option>
+          <option value="nameAsc">A to Z</option>
+          <option value="nameDesc">Z to A</option>
+        </select>
+      </div>
+      <div class="gallery-grid" id="recentGrid"></div>
+      <div class="empty-state" id="recentEmpty">
+        <div class="empty-state-icon">🖼️</div>
+        <div class="empty-state-text">Nothing saved yet</div>
+        <div class="empty-state-hint">Upload and click "Save All to Gallery"</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="../common.js"></script>
+  <script>
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fitToggle = document.getElementById('fitToggle');
+    const previewCarousel = document.getElementById('previewCarousel');
+    const previewTrack = document.getElementById('previewTrack');
+    const previewDots = document.getElementById('previewDots');
+    const previewCounter = document.getElementById('previewCounter');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const clearCurrentBtn = document.getElementById('clearCurrent');
+    const saveAllBtn = document.getElementById('saveAllToGallery');
+    const recentGrid = document.getElementById('recentGrid');
+    const recentEmpty = document.getElementById('recentEmpty');
+    const recentSortSelect = document.getElementById('recentSortSelect');
+
+    let uploads = [];
+    let currentIndex = 0;
+    let currentSortType = 'newest';
+
+    // --- Upload handling ---
+    uploadArea.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileSelect);
+
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      handleFiles(e.dataTransfer.files);
+    });
+
+    function handleFileSelect(e) {
+      handleFiles(e.target.files);
+    }
+
+    function handleFiles(files) {
+      const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+      if (imageFiles.length === 0) {
+        alert('Please select image files only');
+        return;
+      }
+
+      uploads = imageFiles.map(file => ({
+        file: file,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        dataUrl: null,
+        fitMode: 'contain'
+      }));
+
+      // Create data URLs for preview
+      Promise.all(uploads.map(upload => 
+        new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            upload.dataUrl = e.target.result;
+            resolve();
+          };
+          reader.readAsDataURL(upload.file);
+        })
+      )).then(() => {
+        currentIndex = 0;
+        renderCarousel();
+        previewCarousel.style.display = 'block';
+      });
+    }
+
+    // --- Carousel handling ---
+    function renderCarousel() {
+      if (uploads.length === 0) return;
+
+      const upload = uploads[currentIndex];
+      previewTrack.innerHTML = `
+        <div class="preview-item">
+          <img src="${upload.dataUrl}" alt="${upload.name}" style="object-fit: ${upload.fitMode}">
+          <div class="preview-info">${upload.name}</div>
+        </div>
+      `;
+
+      // Update dots
+      previewDots.innerHTML = uploads.map((_, i) => 
+        `<button class="preview-dot ${i === currentIndex ? 'active' : ''}" data-index="${i}"></button>`
+      ).join('');
+
+      // Update counter
+      previewCounter.textContent = `${currentIndex + 1} / ${uploads.length}`;
+
+      // Update nav buttons
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex === uploads.length - 1;
+    }
+
+    prevBtn.addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        renderCarousel();
+      }
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (currentIndex < uploads.length - 1) {
+        currentIndex++;
+        renderCarousel();
+      }
+    });
+
+    previewDots.addEventListener('click', (e) => {
+      if (e.target.classList.contains('preview-dot')) {
+        currentIndex = parseInt(e.target.dataset.index);
+        renderCarousel();
+      }
+    });
+
+    // --- Fit toggle ---
+    fitToggle.addEventListener('click', (e) => {
+      if (e.target.classList.contains('fit-toggle-btn')) {
+        document.querySelectorAll('.fit-toggle-btn').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        uploads[currentIndex].fitMode = e.target.dataset.fit;
+        renderCarousel();
+      }
+    });
+
+    // --- Clear current ---
+    clearCurrentBtn.addEventListener('click', () => {
+      uploads.splice(currentIndex, 1);
+      if (uploads.length === 0) {
+        previewCarousel.style.display = 'none';
+        return;
+      }
+      if (currentIndex >= uploads.length) currentIndex = uploads.length - 1;
+      renderCarousel();
+    });
+
+    // --- Save all to gallery ---
+    saveAllBtn.addEventListener('click', async () => {
+      if (uploads.length === 0) return;
+
+      saveAllBtn.disabled = true;
+      saveAllBtn.textContent = 'Saving...';
+
+      try {
+        // Convert files to base64 and send as JSON
+        const filesData = [];
+        
+        for (let i = 0; i < uploads.length; i++) {
+          const upload = uploads[i];
+          console.log('Processing file:', upload.name, upload.file.size, upload.file.type);
+          
+          // Read file as base64
+          const base64Data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(upload.file);
+          });
+          
+          filesData.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            name: upload.name,
+            dataUrl: base64Data,
+            size: upload.file.size,
+            type: upload.file.type
+          });
+        }
+        
+        console.log('Files converted to base64:', filesData.length);
+        
+        // Send as JSON instead of FormData
+        const uploadedFiles = await AdminAPI.uploadFiles(filesData);
+        const existing = await AdminAPI.loadGallery();
+        const newPhotos = uploadedFiles.map((file, index) => ({
+          id: file.id,
+          name: uploads[index].name,
+          src: file.src,
+          category: 'all',
+          description: '',
+          date: file.uploadedAt || new Date().toISOString()
+        }));
+        await AdminAPI.saveGallery(existing.concat(newPhotos));
+
+        uploads = [];
+        previewCarousel.style.display = 'none';
+        fileInput.value = '';
+        alert('Successfully uploaded ' + uploadedFiles.length + ' photo(s). Everyone will see them after deploy (~1 min).');
+        renderRecent();
+      } catch (err) {
+        console.error('Upload error:', err);
+        alert('Failed to save photos: ' + err.message);
+      }
+
+      saveAllBtn.disabled = false;
+      saveAllBtn.textContent = 'Save All to Gallery';
+    });
+
+    // --- Recent photos ---
+    async function renderRecent() {
+      try {
+        const loaded = await AdminAPI.loadGallery();
+        const photos = loaded.map(function (photo) {
+          return {
+            id: photo.id,
+            src: photo.src,
+            name: photo.name,
+            size: 0,
+            uploadedAt: photo.date
+          };
+        });
+        renderPhotoGrid(photos);
+      } catch (error) {
+        console.error('Error loading gallery:', error);
+        renderPhotoGrid([]);
+      }
+    }
+
+    function renderPhotoGrid(photos) {
+      const sortedPhotos = photos.sort((a, b) => {
+        switch (currentSortType) {
+          case 'newest': return new Date(b.uploadedAt) - new Date(a.uploadedAt);
+          case 'oldest': return new Date(a.uploadedAt) - new Date(b.uploadedAt);
+          case 'nameAsc': return a.name.localeCompare(b.name);
+          case 'nameDesc': return b.name.localeCompare(a.name);
+          default: return 0;
+        }
+      });
+
+      const list = sortedPhotos.slice(0, 12);
+
+      if (list.length === 0) {
+        recentGrid.style.display = 'none';
+        recentEmpty.style.display = 'block';
+        return;
+      }
+
+      recentGrid.style.display = 'grid';
+      recentEmpty.style.display = 'none';
+
+      recentGrid.innerHTML = list.map((photo, index) => {
+        const truncName = (photo.name || 'Untitled').length > 22
+          ? (photo.name || 'Untitled').substring(0, 22) + '…'
+          : (photo.name || 'Untitled');
+        return `
+        <div class="gallery-item" style="animation-delay: ${Math.min(index * 0.03, 0.6)}s" data-id="${photo.id}">
+          <img src="${photo.src}" alt="${photo.name}" loading="lazy">
+          <div class="gallery-item-name">${truncName}</div>
+        </div>`;
+      }).join('');
+
+      recentGrid.querySelectorAll('.gallery-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const id = item.dataset.id;
+          const photo = photos.find(p => String(p.id) === id);
+          if (!photo) return;
+          uploads = [{ dataUrl: photo.src, name: photo.name, size: photo.size || 0, fitMode: 'contain' }];
+          currentIndex = 0;
+          renderCarousel();
+          previewCarousel.style.display = 'block';
+        });
+      });
+    }
+
+    recentSortSelect.addEventListener('change', (e) => {
+      currentSortType = e.target.value;
+      renderRecent();
+    });
+
+    setActiveNav();
+    window.addEventListener('admin-auth-ready', function () {
+      renderRecent();
+    });
+  </script>
+</body>
+</html>
