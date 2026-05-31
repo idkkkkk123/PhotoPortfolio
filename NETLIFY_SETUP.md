@@ -90,9 +90,21 @@ You do **not** create passwords in the code. You invite people by email in Netli
 4. You land on the site with `#invite_token=...` in the URL. A popup opens to **choose your password** (Netlify does **not** email a password — you create it here).
 5. After that, go to the admin URL and use **that email + the password you just chose**.
 
-**If invite opens a “Log in” screen instead of “Sign up”:** hard-refresh the homepage, or open  
-`https://photoportfolioweb.netlify.app/#invite_token=...`  
-(copy the full link from your email). The site should open **Sign up** / set password, not ask for an existing password.
+**If “Accept invite” opens the normal website with no popup:** Netlify’s email link is probably missing the token. Fix the invite email (once):
+
+1. Netlify → your site → **Identity** → **Emails** → **Invite template**.
+2. Find the invite link (`<a href=...>`). Replace it with:
+
+```html
+<a href="https://photoportfolioweb.netlify.app/invite.html#invite_token={{ .Token }}">Accept the invite</a>
+```
+
+3. **Save** the template.
+4. **Identity** → **Invite users** → send a **new** invite (old links may be invalid).
+
+Open the new email link → you should land on **invite.html** and get a **set password** popup (you choose the password).
+
+Direct link shape: `https://photoportfolioweb.netlify.app/invite.html#invite_token=...`
 
 **For your friend (photographer):**
 

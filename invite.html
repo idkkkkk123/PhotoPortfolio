@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Accept admin invite</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Outfit", system-ui, sans-serif;
+      background: #f4f4f5;
+      color: #18181b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      max-width: 440px;
+      width: 100%;
+      background: #fff;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+    .card h1 { margin: 0 0 0.75rem; font-size: 1.35rem; }
+    .card p { margin: 0 0 1rem; color: #52525b; line-height: 1.55; font-size: 0.95rem; }
+    .btn {
+      display: inline-block;
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.85rem 1.25rem;
+      border: none;
+      border-radius: 10px;
+      background: #18181b;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-secondary { background: #71717a; }
+    .err { color: #b91c1c; font-size: 0.875rem; margin-top: 1rem; }
+  </style>
+  <script src="/identity-invite.js"></script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+  <div class="card">
+    <h1>Complete your admin invite</h1>
+    <p id="status">Preparing signup…</p>
+    <p id="hint" hidden>You choose your password here — Netlify does not email one.</p>
+    <button type="button" class="btn" id="openSignup" hidden>Open set-password form</button>
+    <p class="err" id="error" hidden></p>
+    <a href="/" class="btn btn-secondary" id="homeLink" hidden>Back to website</a>
+  </div>
+
+  <script>
+    (function () {
+      var statusEl = document.getElementById('status');
+      var hintEl = document.getElementById('hint');
+      var errorEl = document.getElementById('error');
+      var openBtn = document.getElementById('openSignup');
+      var homeLink = document.getElementById('homeLink');
+
+      var hasToken = (window.location.hash || '').includes('invite_token');
+      try {
+        if (!hasToken) hasToken = !!sessionStorage.getItem('netlify_invite_token');
+      } catch (e) { /* ignore */ }
+
+      if (!hasToken) {
+        statusEl.textContent = 'No invite token in this link.';
+        errorEl.hidden = false;
+        errorEl.textContent = 'Ask for a new invite in Netlify (Identity → Invite users). The email link must include invite.html or #invite_token= — see NETLIFY_SETUP.md.';
+        homeLink.hidden = false;
+        return;
+      }
+
+      if (!window.netlifyIdentity) {
+        statusEl.textContent = 'Loading login service…';
+        errorEl.hidden = false;
+        errorEl.textContent = 'If this stays here, enable Identity in Netlify and refresh.';
+        return;
+      }
+
+      hintEl.hidden = false;
+      statusEl.textContent = 'A popup should open to set your password.';
+
+      setupNetlifyIdentity({
+        onLoggedIn: function () {
+          statusEl.textContent = 'Success! Opening admin…';
+          window.location.href = '/admin-bbpews098ge8ht4ez4xdeg/';
+        },
+        onReadyLoggedOut: function () {
+          openBtn.hidden = false;
+          openBtn.addEventListener('click', function () {
+            openNetlifyIdentityModal();
+          });
+          setTimeout(function () {
+            openNetlifyIdentityModal();
+          }, 400);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

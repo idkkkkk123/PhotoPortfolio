@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="identity-invite.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photography Portfolio</title>
@@ -231,16 +232,6 @@
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && infoModal.classList.contains('active')) infoModal.classList.remove('active'); });
     </script>
 
-    <!-- Netlify invite links land here (#invite_token=). Opens "set password", not login. -->
-    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-    <script src="identity-invite.js"></script>
-    <script>
-      setupNetlifyIdentity({
-        onLoggedIn: function () { goToAdminAfterLogin(); },
-        onReadyLoggedOut: function () {
-          if (identityHashType() === 'invite') openNetlifyIdentityModal();
-        }
-      });
-    </script>
+    <!-- Invite links with #invite_token are redirected to invite.html by identity-invite.js -->
 </body>
 </html>
