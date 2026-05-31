@@ -68,14 +68,13 @@
     .admin-gate[hidden] { display: none !important; }
   </style>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script src="https://unpkg.com/decap-cms@3.1.11/dist/decap-cms.js"></script>
 </head>
 <body>
   <div id="admin-gate" class="admin-gate">
     <div class="admin-gate-card">
       <h1>Photo site admin</h1>
       <p>Log in with your Netlify invite to edit gallery, albums, and portfolio. After login the editor loads here.</p>
-      <p id="admin-gate-loading" class="admin-gate-loading">Loading…</p>
+      <p id="admin-gate-loading" class="admin-gate-loading">Loading editor…</p>
       <button type="button" class="admin-gate-btn" id="admin-login-btn" hidden>Log in</button>
       <p id="admin-gate-error" class="admin-gate-error" hidden></p>
     </div>
@@ -85,11 +84,18 @@
     window.CMS_MANUAL_INIT = true;
 
     (function () {
+      const CMS_SCRIPT_URLS = [
+        'https://cdn.jsdelivr.net/npm/netlify-cms-app@2.15.72/dist/netlify-cms-app.js',
+        'https://unpkg.com/netlify-cms-app@2.15.72/dist/netlify-cms-app.js',
+        'https://cdn.jsdelivr.net/npm/decap-cms@3.1.11/dist/decap-cms.js'
+      ];
+
       const gate = document.getElementById('admin-gate');
       const loginBtn = document.getElementById('admin-login-btn');
       const loadingEl = document.getElementById('admin-gate-loading');
       const errorEl = document.getElementById('admin-gate-error');
       let cmsStarted = false;
+      let identityReady = false;
 
       function showError(msg) {
         loadingEl.hidden = true;
@@ -107,10 +113,14 @@
         gate.hidden = true;
       }
 
+      function cmsAvailable() {
+        return window.CMS && typeof window.CMS.init === 'function';
+      }
+
       function startCms() {
         if (cmsStarted) return;
-        if (!window.CMS || typeof window.CMS.init !== 'function') {
-          showError('Editor failed to load. Disable ad blockers or try another browser, then refresh.');
+        if (!cmsAvailable()) {
+          showError('Editor is still loading. Wait a moment and click Log in again.');
           return;
         }
         cmsStarted = true;
@@ -121,16 +131,18 @@
       function setupIdentity() {
         const identity = window.netlifyIdentity;
         if (!identity) {
-          showError('Netlify Identity is not available. In Netlify: Site settings → Identity → Enable Identity, then refresh.');
+          showError(
+            'Netlify Identity is not enabled. In Netlify: Site configuration → Identity → Enable Identity, then refresh.'
+          );
           return;
         }
 
         identity.on('init', function (user) {
+          identityReady = true;
           if (user) {
             startCms();
           } else {
             showLoginButton();
-            identity.open('login');
           }
         });
 
@@ -149,11 +161,43 @@
         identity.init();
       }
 
-      if (!window.CMS) {
-        showError('Editor script did not load. Check your internet connection and refresh.');
-      } else {
-        setupIdentity();
+      function loadScript(url) {
+        return new Promise(function (resolve, reject) {
+          const script = document.createElement('script');
+          script.src = url;
+          script.async = false;
+          script.onload = function () { resolve(url); };
+          script.onerror = function () { reject(new Error(url)); };
+          document.head.appendChild(script);
+        });
       }
+
+      async function loadCmsScripts() {
+        for (const url of CMS_SCRIPT_URLS) {
+          try {
+            await loadScript(url);
+            if (cmsAvailable()) return true;
+          } catch (err) {
+            console.warn('CMS script failed:', url);
+          }
+        }
+        return cmsAvailable();
+      }
+
+      loadCmsScripts()
+        .then(function (ok) {
+          if (!ok) {
+            showError(
+              'Editor script could not load (often blocked by ad blockers). Allow cdn.jsdelivr.net and unpkg.com, or try another browser.'
+            );
+            return;
+          }
+          loadingEl.textContent = 'Editor ready. Log in to continue.';
+          setupIdentity();
+        })
+        .catch(function () {
+          showError('Editor failed to load. Refresh the page or try another browser.');
+        });
     })();
   </script>
 </body>
