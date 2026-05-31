@@ -174,15 +174,23 @@ Netlify’s GitHub app must be allowed to **write** to the repo (CMS commits JSO
 
 **Optional:** [Advanced editor (CMS)](https://photoportfolioweb.netlify.app/admin-bbpews098ge8ht4ez4xdeg/cms.html) for portfolio JSON and Decap CMS **Publish** workflow.
 
-### `GITHUB_TOKEN` (required for custom admin saves)
+### Saving photos (Git Gateway — usual setup)
 
-In Netlify → **Site configuration** → **Environment variables**, add:
+The custom admin saves through **Git Gateway** using your **Netlify login** (same as CMS). You do **not** need `GITHUB_TOKEN` if:
+
+1. **Identity** is enabled  
+2. **Git Gateway** is enabled (Identity → **Services** → **Git Gateway** → **Enable**)  
+3. You are **logged in** on the admin page before uploading  
+
+### `GITHUB_TOKEN` (optional fallback)
+
+Only add this if Git Gateway saves fail. Netlify → **Environment variables**:
 
 | Variable | Value |
 |----------|--------|
-| `GITHUB_TOKEN` | GitHub personal access token with **repo** scope (write access to `idkkkkk123/PhotoPortfolio`) |
+| `GITHUB_TOKEN` | GitHub PAT with **repo** scope for `idkkkkk123/PhotoPortfolio` |
 
-Redeploy after adding. Without this, Upload/Gallery/Albums show an error when saving.
+Redeploy after adding.
 
 ---
 
@@ -227,7 +235,7 @@ If JSON has photos but the gallery is empty, hard-refresh the page or check the 
 
 | Problem | Fix |
 |---------|-----|
-| Upload says GITHUB_TOKEN not set | Add `GITHUB_TOKEN` env var in Netlify and redeploy. |
+| Upload says GITHUB_TOKEN not set | Log in on admin, enable **Git Gateway**, hard-refresh (Ctrl+F5). Optional: add `GITHUB_TOKEN`. |
 | Admin pages redirect to CMS only | Remove old `_redirects` rules; use latest `main`. |
 | “Failed to load config.yml” | Open the exact admin URL above; `config.yml` must sit next to `index.html` in that folder. |
 | “Failed to load settings from /.netlify/identity” | **Enable Identity** on the Netlify site (step 2 above). If Identity is already on, hard-refresh admin (Ctrl+F5). |
