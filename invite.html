@@ -19,6 +19,8 @@
       padding: 2rem;
     }
     .card {
+      position: relative;
+      z-index: 100001;
       max-width: 440px;
       width: 100%;
       background: #fff;
@@ -26,6 +28,7 @@
       border-radius: 16px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
       text-align: center;
+      pointer-events: auto;
     }
     .card h1 { margin: 0 0 0.75rem; font-size: 1.35rem; }
     .card p { margin: 0 0 1rem; color: #52525b; line-height: 1.55; font-size: 0.95rem; }
@@ -37,75 +40,143 @@
       border: none;
       border-radius: 10px;
       background: #18181b;
-      color: #fff;
+      color: #fff !important;
       font-size: 1rem;
       cursor: pointer;
       text-decoration: none;
     }
+    .btn:hover { background: #27272a; }
     .btn-secondary { background: #71717a; }
-    .err { color: #b91c1c; font-size: 0.875rem; margin-top: 1rem; }
+    .btn-secondary:hover { background: #52525b; }
+    .err { color: #b91c1c; font-size: 0.875rem; margin-top: 1rem; line-height: 1.45; }
   </style>
-  <script src="/identity-invite.js"></script>
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
   <div class="card">
     <h1>Complete your admin invite</h1>
-    <p id="status">Preparing signup…</p>
-    <p id="hint" hidden>You choose your password here — Netlify does not email one.</p>
+    <p id="status">Loading…</p>
+    <p id="hint" hidden>Choose a password in the Netlify popup (center or behind this box). That same password works for admin login.</p>
     <button type="button" class="btn" id="openSignup" hidden>Open set-password form</button>
+    <a href="/" class="btn btn-secondary" id="homeLink">Back to website</a>
     <p class="err" id="error" hidden></p>
-    <a href="/" class="btn btn-secondary" id="homeLink" hidden>Back to website</a>
   </div>
 
+  <script src="/identity-invite.js"></script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script>
     (function () {
+      var ADMIN = '/admin-bbpews098ge8ht4ez4xdeg/';
       var statusEl = document.getElementById('status');
       var hintEl = document.getElementById('hint');
       var errorEl = document.getElementById('error');
       var openBtn = document.getElementById('openSignup');
-      var homeLink = document.getElementById('homeLink');
 
-      var hasToken = (window.location.hash || '').includes('invite_token');
-      try {
-        if (!hasToken) hasToken = !!sessionStorage.getItem('netlify_invite_token');
-      } catch (e) { /* ignore */ }
-
-      if (!hasToken) {
-        statusEl.textContent = 'No invite token in this link.';
+      function showError(msg) {
+        statusEl.textContent = 'Something went wrong';
         errorEl.hidden = false;
-        errorEl.innerHTML =
-          'Free plan: In Netlify set Identity <strong>Site URL</strong> to <code>https://photoportfolioweb.netlify.app/invite.html</code>, then send a <strong>new</strong> invite. ' +
-          'Or right‑click “Accept the invite” in the email → <strong>Copy link</strong> → paste here. See NETLIFY_SETUP.md.';
-        homeLink.hidden = false;
-        return;
+        errorEl.textContent = msg;
+        openBtn.hidden = false;
       }
 
-      if (!window.netlifyIdentity) {
-        statusEl.textContent = 'Loading login service…';
-        errorEl.hidden = false;
-        errorEl.textContent = 'If this stays here, enable Identity in Netlify and refresh.';
-        return;
-      }
-
-      hintEl.hidden = false;
-      statusEl.textContent = 'A popup should open to set your password.';
-
-      setupNetlifyIdentity({
-        onLoggedIn: function () {
-          statusEl.textContent = 'Success! Opening admin…';
-          window.location.href = '/admin-bbpews098ge8ht4ez4xdeg/';
-        },
-        onReadyLoggedOut: function () {
-          openBtn.hidden = false;
-          openBtn.addEventListener('click', function () {
-            openNetlifyIdentityModal();
-          });
-          setTimeout(function () {
-            openNetlifyIdentityModal();
-          }, 400);
+      function getInviteToken() {
+        var hash = window.location.hash || '';
+        var m = hash.match(/invite_token=([^&]+)/);
+        if (m && m[1]) return decodeURIComponent(m[1]);
+        try {
+          return sessionStorage.getItem('netlify_invite_token') || '';
+        } catch (e) {
+          return '';
         }
-      });
+      }
+
+      function ensureInviteHash() {
+        var token = getInviteToken();
+        if (!token) return '';
+        try {
+          sessionStorage.setItem('netlify_invite_token', token);
+        } catch (e) { /* ignore */ }
+        if (!(window.location.hash || '').includes('invite_token')) {
+          window.location.hash = 'invite_token=' + encodeURIComponent(token);
+        }
+        return token;
+      }
+
+      function goAdmin() {
+        try {
+          sessionStorage.removeItem('netlify_invite_token');
+        } catch (e) { /* ignore */ }
+        window.location.href = ADMIN;
+      }
+
+      function bindIdentity() {
+        var identity = window.netlifyIdentity;
+        if (!identity) return false;
+
+        identity.on('init', function (user) {
+          if (user) {
+            statusEl.textContent = 'Account ready! Opening admin…';
+            goAdmin();
+            return;
+          }
+          hintEl.hidden = false;
+          openBtn.hidden = false;
+          statusEl.textContent = 'Set your password in the popup (or click the button below).';
+        });
+
+        identity.on('login', function () {
+          goAdmin();
+        });
+
+        identity.on('error', function (err) {
+          showError((err && err.message) ? err.message : 'Identity error. Try a new invite from Netlify.');
+        });
+
+        openBtn.addEventListener('click', function () {
+          ensureInviteHash();
+          try {
+            identity.open('signup');
+          } catch (e) {
+            identity.init();
+          }
+        });
+
+        ensureInviteHash();
+        identity.init();
+        return true;
+      }
+
+      function start() {
+        var token = ensureInviteHash();
+        if (!token) {
+          statusEl.textContent = 'No invite token in this link.';
+          errorEl.hidden = false;
+          errorEl.innerHTML =
+            'Right-click “Accept the invite” in your email → Copy link → paste the full URL here. ' +
+            'It must include <code>#invite_token=</code>. Then send a new invite from Netlify if needed.';
+          return;
+        }
+
+        if (bindIdentity()) return;
+
+        var tries = 0;
+        var wait = setInterval(function () {
+          tries++;
+          if (bindIdentity()) {
+            clearInterval(wait);
+            return;
+          }
+          if (tries > 50) {
+            clearInterval(wait);
+            showError('Netlify Identity did not load. Disable ad blockers and refresh.');
+          }
+        }, 100);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+      } else {
+        start();
+      }
     })();
   </script>
 </body>

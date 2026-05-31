@@ -78,16 +78,27 @@
     return null;
   };
 
+  function ensureInviteHashForIdentity() {
+    try {
+      const saved = sessionStorage.getItem(STORAGE_INVITE);
+      if (saved && !getHash().includes('invite_token')) {
+        window.location.hash = 'invite_token=' + encodeURIComponent(saved);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   window.openNetlifyIdentityModal = function () {
     const id = window.netlifyIdentity;
     if (!id) return;
     const type = window.identityHashType();
     if (type === 'invite') {
-      const saved = sessionStorage.getItem(STORAGE_INVITE);
-      if (saved && !getHash().includes('invite_token')) {
-        window.location.hash = 'invite_token=' + encodeURIComponent(saved);
-      }
-      id.open('signup');
+      ensureInviteHashForIdentity();
+      id.init();
+      setTimeout(function () {
+        try {
+          id.open('signup');
+        } catch (e) { /* ignore */ }
+      }, 200);
     } else if (type === 'recovery') {
       id.open('login');
     } else {
@@ -114,8 +125,12 @@
         return;
       }
       const type = window.identityHashType();
-      if (type === 'invite') {
-        identity.open('signup');
+      const onInvitePage = window.location.pathname.includes('invite.html');
+      if (type === 'invite' && onInvitePage) {
+        /* invite.html handles hash + init; do not open signup here (breaks token) */
+        if (options.onReadyLoggedOut) options.onReadyLoggedOut(identity);
+      } else if (type === 'invite') {
+        window.location.replace(INVITE_PAGE + getHash());
       } else if (type === 'recovery') {
         identity.open('login');
       } else if (options.onReadyLoggedOut) {
@@ -167,5 +182,7 @@
   if (window.captureNetlifyIdentityTokens()) {
     return;
   }
-  window.redirectToInvitePageIfNeeded();
+  if (!window.location.pathname.includes('invite.html')) {
+    window.redirectToInvitePageIfNeeded();
+  }
 })();
