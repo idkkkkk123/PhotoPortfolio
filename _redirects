@@ -1,1 +1,8 @@
 # Do not SPA-fallback JSON or image paths (public site is static HTML + JSON).
+
+# Old admin tools (localStorage) → Netlify CMS
+/admin-bbpews098ge8ht4ez4xdeg/upload.html    /admin-bbpews098ge8ht4ez4xdeg/    302
+/admin-bbpews098ge8ht4ez4xdeg/gallery.html   /admin-bbpews098ge8ht4ez4xdeg/    302
+/admin-bbpews098ge8ht4ez4xdeg/albums.html    /admin-bbpews098ge8ht4ez4xdeg/    302
+/admin-bbpews098ge8ht4ez4xdeg/display.html   /admin-bbpews098ge8ht4ez4xdeg/    302
+/photo-uploader.html                         /admin-bbpews098ge8ht4ez4xdeg/    302

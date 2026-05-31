@@ -150,6 +150,22 @@ If JSON has photos but the gallery is empty, hard-refresh the page or check the 
 
 ---
 
+## Health check (everything wired correctly)
+
+| Check | URL / action | Good sign |
+|--------|----------------|-----------|
+| Repo public | [raw gallery.json](https://raw.githubusercontent.com/idkkkkk123/PhotoPortfolio/main/photos/gallery.json) | JSON opens, not 404 |
+| Netlify data | `/photos/gallery.json` on your site | Same JSON |
+| Identity | `/.netlify/identity` | **401** or **200**, not **404** |
+| Admin | `/admin-bbpews098ge8ht4ez4xdeg/` | “Editor ready” → Log in → CMS |
+| Gallery | `gallery.html` | Shows photos after CMS **Publish** |
+| Home portfolio | `index.html` (scroll down) | Same portfolio items as admin |
+| Second device | Open gallery on phone | Same photos as laptop |
+
+**Only upload here:** `/admin-bbpews098ge8ht4ez4xdeg/` (Netlify CMS). Do not use old `upload.html` paths.
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |
