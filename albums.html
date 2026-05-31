@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Albums</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 </head>
 <body>
   <div class="top-loader" id="topLoader"></div>
@@ -14,7 +15,7 @@
     <div class="nav-container">
       <a class="nav-btn" href="index.html">Home</a>
       <a class="nav-btn" href="gallery.html">Gallery</a>
-      <a class="nav-btn active" href="albums.html">Albums</a>
+      <a class="nav-btn" href="albums.html">Albums</a>
       <a class="nav-btn" href="portfolio.html">Portfolio</a>
     </div>
   </nav>
@@ -23,12 +24,14 @@
     <section id="albumsSection">
       <div class="section-header">
         <h2>Albums</h2>
+        <p class="section-subtitle">Curated sets with auto-generated covers.</p>
       </div>
+
       <div class="album-grid" id="albumGrid"></div>
       <div class="empty-state" id="albumsEmpty">
         <div class="empty-state-icon">📁</div>
         <div class="empty-state-text">No albums yet</div>
-        <div class="empty-state-hint">Admin can create albums through the admin panel</div>
+        <div class="empty-state-hint">Ask your friend to upload albums in Admin</div>
       </div>
     </section>
   </main>
@@ -38,55 +41,172 @@
     <div class="album-viewer-container">
       <div class="alb-viewer-header">
         <h3 id="viewerAlbumName">Album</h3>
-        <button class="de-tb-btn" id="viewerCloseBtn">&times; Close</button>
+        <div class="alb-viewer-actions">
+          <button class="de-tb-btn" id="viewerCloseBtn" aria-label="Close">&times;</button>
+        </div>
       </div>
+
       <div class="alb-viewer-grid" id="albumViewerGrid"></div>
+
       <div class="empty-state" id="viewerEmpty" style="display:none;">
         <div class="empty-state-icon">🖼️</div>
         <div class="empty-state-text">No photos in this album</div>
+        <div class="empty-state-hint">Ask your friend to add photos in Admin</div>
       </div>
     </div>
   </div>
 
+  <!-- Photo Zoom Lightbox -->
   <div id="photoZoomLightbox" class="lightbox photo-zoom-lightbox">
-    <button class="lightbox-close-btn" id="zoomCloseBtn">×</button>
+    <button class="lightbox-close-btn" id="zoomCloseBtn">&times;</button>
+    <a class="lightbox-download-btn" id="albumZoomDownloadBtn" href="#" download>Download</a>
     <img id="zoomImage" src="" alt="Zoomed photo">
   </div>
 
-  <script src="common.js"></script>
+  <script src="common.js?v=3"></script>
   <script>
-    var topLoader = document.getElementById('topLoader');
+    const topLoader = document.getElementById('topLoader');
     function showLoader() { topLoader.classList.add('active'); }
     function hideLoader() { topLoader.classList.remove('active'); }
 
-    var albumGrid = document.getElementById('albumGrid');
-    var albumsEmpty = document.getElementById('albumsEmpty');
-    var albumViewerModal = document.getElementById('albumViewerModal');
-    var albumViewerGrid = document.getElementById('albumViewerGrid');
-    var viewerEmpty = document.getElementById('viewerEmpty');
-    var photoZoomLightbox = document.getElementById('photoZoomLightbox');
-    var zoomImage = document.getElementById('zoomImage');
-    var currentViewingAlbum = null;
+    const albumGrid = document.getElementById('albumGrid');
+    const albumsEmpty = document.getElementById('albumsEmpty');
 
-    function openAlbumViewer(album) {
-      currentViewingAlbum = album;
-      document.getElementById('viewerAlbumName').textContent = album.name;
-      if (!album.images || album.images.length === 0) {
-        albumViewerGrid.style.display = 'none';
-        viewerEmpty.style.display = 'block';
-      } else {
-        viewerEmpty.style.display = 'none';
-        albumViewerGrid.style.display = 'grid';
-        albumViewerGrid.innerHTML = album.images.map(function(src) {
-          var name = src.split('/').pop();
-          return '<div class="alb-photo-card"><img src="' + src + '" alt="' + name + '" loading="lazy"><div class="gallery-item-name">' + (name.length > 18 ? name.substring(0, 18) + '…' : name) + '</div></div>';
-        }).join('');
-        albumViewerGrid.querySelectorAll('.alb-photo-card').forEach(function(card, i) {
-          card.addEventListener('click', function() {
-            openPhotoZoom(album.images[i]);
-          });
-        });
+    const albumViewerModal = document.getElementById('albumViewerModal');
+    const albumViewerGrid = document.getElementById('albumViewerGrid');
+    const viewerEmpty = document.getElementById('viewerEmpty');
+
+    const photoZoomLightbox = document.getElementById('photoZoomLightbox');
+    const zoomImage = document.getElementById('zoomImage');
+    const albumZoomDownloadBtn = document.getElementById('albumZoomDownloadBtn');
+
+    let albums = [];
+    let currentViewingAlbum = null;
+
+    function normalizePhoto(p) {
+      if (!p) return null;
+      if (typeof p === 'string') return { src: p, name: '' };
+      if (typeof p === 'object' && p.src) return p;
+      return null;
+    }
+
+    function getAlbumPhotos(album) {
+      const list = (album && Array.isArray(album.photos)) ? album.photos : [];
+      return list.map(normalizePhoto).filter(Boolean);
+    }
+
+    // Cover generation: auto-collage from first 4 photos.
+    function generateCoverDataUrl(photos, size = 320) {
+      const c = document.createElement('canvas');
+      c.width = size; c.height = size;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#f4f4f5';
+      ctx.fillRect(0, 0, size, size);
+
+      const items = (photos || []).slice(0, 4);
+      if (!items || items.length === 0) return Promise.resolve(c.toDataURL('image/png'));
+
+      return new Promise(resolve => {
+        const count = Math.min(items.length, 4);
+        let loaded = 0;
+        const positions = count === 1
+          ? [[0, 0, size, size]]
+          : count === 2
+            ? [[0, 0, size/2, size], [size/2, 0, size/2, size]]
+            : count === 3
+              ? [[0, 0, size/2, size], [size/2, 0, size/2, size/2], [size/2, size/2, size/2, size/2]]
+              : [[0, 0, size/2, size/2], [size/2, 0, size/2, size/2], [0, size/2, size/2, size/2], [size/2, size/2, size/2, size/2]];
+
+        for (let i = 0; i < count; i++) {
+          const photo = items[i];
+          const img = new Image();
+          img.onload = () => {
+            const [x, y, w, h] = positions[i];
+            const gap = 2;
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(x + gap, y + gap, w - gap*2, h - gap*2, 8);
+            ctx.clip();
+            const scale = Math.max((w - gap*2) / img.width, (h - gap*2) / img.height);
+            const dw = img.width * scale, dh = img.height * scale;
+            ctx.drawImage(img, x + gap + (w - gap*2 - dw)/2, y + gap + (h - gap*2 - dh)/2, dw, dh);
+            ctx.restore();
+            loaded++;
+            if (loaded === count) resolve(c.toDataURL('image/png'));
+          };
+          img.onerror = () => {
+            loaded++;
+            if (loaded === count) resolve(c.toDataURL('image/png'));
+          };
+          img.src = photo.src;
+        }
+      });
+    }
+
+    let lastAlbumsSig = '';
+
+    async function renderAlbumGrid(options = {}) {
+      const silent = !!options.silent;
+      if (!silent) showLoader();
+      const loaded = await loadStaticAlbums();
+      const sig = JSON.stringify(loaded || []);
+      if (silent && sig === lastAlbumsSig) {
+        if (!silent) hideLoader();
+        return;
       }
+      lastAlbumsSig = sig;
+      albums = loaded;
+
+      if (!albums || albums.length === 0) {
+        albumGrid.style.display = 'none';
+        albumsEmpty.style.display = 'block';
+        hideLoader();
+        return;
+      }
+
+      albumGrid.style.display = 'grid';
+      albumsEmpty.style.display = 'none';
+
+      const cardsHtml = [];
+      for (let i = 0; i < albums.length; i++) {
+        const album = albums[i];
+        const photos = getAlbumPhotos(album);
+        const coverUrl = await generateCoverDataUrl(photos.slice(0, 4));
+        const count = photos.length;
+
+        cardsHtml.push(`
+          <div class="album-card" data-album-idx="${i}" role="button" tabindex="0">
+            <div class="album-card-image">
+              <img src="${coverUrl}" alt="${album.name || ''}">
+            </div>
+            <div class="album-card-info">
+              <h3 class="album-card-title">${album.name || 'Album'}</h3>
+              <p class="album-card-meta">${count} photo${count === 1 ? '' : 's'}</p>
+            </div>
+          </div>
+        `);
+      }
+
+      albumGrid.innerHTML = cardsHtml.join('');
+
+      document.querySelectorAll('.album-card').forEach(card => {
+        const idx = parseInt(card.dataset.albumIdx, 10);
+        const onClick = () => openAlbumViewer(idx);
+        card.addEventListener('click', onClick);
+        card.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') onClick();
+        });
+      });
+
+      hideLoader();
+    }
+
+    function openAlbumViewer(albumIdx) {
+      currentViewingAlbum = albums[albumIdx] || null;
+      if (!currentViewingAlbum) return;
+
+      document.getElementById('viewerAlbumName').textContent = currentViewingAlbum.name || 'Album';
+      renderAlbumContents();
       albumViewerModal.classList.add('active');
       document.body.style.overflow = 'hidden';
     }
@@ -96,72 +216,66 @@
       document.body.style.overflow = '';
     }
 
-    function openPhotoZoom(src) {
+    function renderAlbumContents() {
+      const photos = getAlbumPhotos(currentViewingAlbum);
+
+      if (photos.length === 0) {
+        albumViewerGrid.style.display = 'none';
+        viewerEmpty.style.display = 'block';
+        return;
+      }
+
+      albumViewerGrid.style.display = 'grid';
+      viewerEmpty.style.display = 'none';
+
+      albumViewerGrid.innerHTML = photos.map(p => `
+        <div class="alb-photo-card" role="button" tabindex="0" data-src="${p.src}" data-name="${(p.name || '').replace(/"/g, '&quot;')}">
+          <img src="${p.src}" alt="${p.name || ''}" loading="lazy">
+        </div>
+      `).join('');
+
+      albumViewerGrid.querySelectorAll('.alb-photo-card').forEach(card => {
+        const src = card.dataset.src;
+        const name = card.dataset.name || 'photo';
+        const onClick = () => openPhotoZoom(src, name);
+        card.addEventListener('click', onClick);
+        card.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') onClick();
+        });
+      });
+    }
+
+    function openPhotoZoom(src, name) {
       zoomImage.src = src;
+      albumZoomDownloadBtn.href = src;
+      const filename = String(name || 'photo').trim().replace(/[\\/:*?"<>|]+/g, '-') || 'photo';
+      albumZoomDownloadBtn.setAttribute('download', filename);
       photoZoomLightbox.classList.add('active');
     }
+
     function closePhotoZoom() {
       photoZoomLightbox.classList.remove('active');
     }
 
-    function renderAlbumGrid(albums) {
-      if (!albums || albums.length === 0) {
-        albumGrid.style.display = 'none';
-        albumsEmpty.style.display = 'block';
-        hideLoader();
-        return;
-      }
-      albumGrid.style.display = 'grid';
-      albumsEmpty.style.display = 'none';
-      var coverUrl = '';
-      var cards = albums.map(function(album) {
-        var firstImg = album.images && album.images[0];
-        coverUrl = firstImg || '';
-        var count = album.images ? album.images.length : 0;
-        return '<div class="album-card" data-album-id="' + album.id + '">' +
-          '<div class="album-card-image">' +
-          (coverUrl ? '<img src="' + coverUrl + '" alt="' + (album.name || '') + '">' : '<div class="album-card-placeholder"></div>') +
-          '</div>' +
-          '<div class="album-card-info">' +
-          '<h3 class="album-card-title">' + (album.name || album.id) + '</h3>' +
-          '<p class="album-card-meta">' + count + ' photo' + (count !== 1 ? 's' : '') + '</p>' +
-          '</div></div>';
-      }).join('');
-      albumGrid.innerHTML = cards;
-      albumGrid.querySelectorAll('.album-card').forEach(function(card) {
-        card.addEventListener('click', function() {
-          var album = albums.find(function(a) { return a.id === card.dataset.albumId; });
-          if (album) openAlbumViewer(album);
-        });
-      });
-      hideLoader();
-    }
-
     document.getElementById('viewerCloseBtn').addEventListener('click', closeAlbumViewer);
-    albumViewerModal.addEventListener('click', function(e) { if (e.target === albumViewerModal) closeAlbumViewer(); });
+    albumViewerModal.addEventListener('click', e => {
+      if (e.target === albumViewerModal) closeAlbumViewer();
+    });
+
     document.getElementById('zoomCloseBtn').addEventListener('click', closePhotoZoom);
-    photoZoomLightbox.addEventListener('click', function(e) { if (e.target === photoZoomLightbox) closePhotoZoom(); });
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        if (photoZoomLightbox.classList.contains('active')) closePhotoZoom();
-        else if (albumViewerModal.classList.contains('active')) closeAlbumViewer();
-      }
+    photoZoomLightbox.addEventListener('click', e => {
+      if (e.target === photoZoomLightbox) closePhotoZoom();
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      if (photoZoomLightbox.classList.contains('active')) closePhotoZoom();
+      else if (albumViewerModal.classList.contains('active')) closeAlbumViewer();
     });
 
     setActiveNav();
-
-    // Load albums from localStorage (shared with admin)
-    const albumsData = JSON.parse(localStorage.getItem('albums') || '[]');
-    const albumsForViewer = albumsData.map(function(album, index) {
-      return {
-        id: index.toString(),
-        name: album.name || 'Album ' + (index + 1),
-        images: (album.photos || []).map(function(photo) {
-          return photo.image || '';
-        }).filter(function(img) { return img; })
-      };
-    });
-    renderAlbumGrid(albumsForViewer);
+    renderAlbumGrid();
+    startLiveContentSync(renderAlbumGrid);
   </script>
 </body>
 </html>

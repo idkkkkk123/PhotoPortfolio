@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gallery</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 </head>
 <body>
   <div class="top-loader" id="topLoader"></div>
@@ -13,7 +14,7 @@
   <nav class="nav glass">
     <div class="nav-container">
       <a class="nav-btn" href="index.html">Home</a>
-      <a class="nav-btn active" href="gallery.html">Gallery</a>
+      <a class="nav-btn" href="gallery.html">Gallery</a>
       <a class="nav-btn" href="albums.html">Albums</a>
       <a class="nav-btn" href="portfolio.html">Portfolio</a>
     </div>
@@ -24,18 +25,22 @@
       <div class="section-header">
         <h2>Gallery</h2>
       </div>
+
       <div class="filter-controls">
         <label for="gallerySortSelect">Sort by:</label>
         <select id="gallerySortSelect">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
           <option value="nameAsc">A to Z</option>
           <option value="nameDesc">Z to A</option>
         </select>
       </div>
+
       <div class="gallery-grid" id="galleryGrid"></div>
       <div class="empty-state" id="emptyState">
         <div class="empty-state-icon">📸</div>
         <div class="empty-state-text">No photos yet</div>
-        <div class="empty-state-hint">Admin can add photos through the admin panel</div>
+        <div class="empty-state-hint">Ask your friend to upload photos in Admin</div>
       </div>
     </section>
   </main>
@@ -44,10 +49,12 @@
     <button class="lightbox-close" id="lightboxClose">×</button>
     <button class="lightbox-nav lightbox-prev" id="lightboxPrev">‹</button>
     <button class="lightbox-nav lightbox-next" id="lightboxNext">›</button>
+
     <div class="lightbox-body">
       <div class="lightbox-img-wrap" id="lightboxImgWrap">
         <img id="lightboxImg" src="" alt="">
       </div>
+
       <div class="lightbox-info" id="lightboxInfo" style="display:none;">
         <div class="lightbox-info-row"><span class="lightbox-info-label">Filename</span><span class="lightbox-info-val" id="lbInfoName">—</span></div>
         <div class="lightbox-info-row"><span class="lightbox-info-label">Resolution</span><span class="lightbox-info-val" id="lbInfoRes">—</span></div>
@@ -55,44 +62,84 @@
         <div class="lightbox-info-row"><span class="lightbox-info-label">Format</span><span class="lightbox-info-val" id="lbInfoFormat">—</span></div>
       </div>
     </div>
+
     <button class="lightbox-info-btn" id="lightboxInfoBtn" title="Toggle Info">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 16v-4"/>
+        <path d="M12 8h.01"/>
+      </svg>
     </button>
+
+    <a class="lightbox-download-btn" id="lightboxDownloadBtn" href="#" download>Download</a>
+
     <button class="lightbox-zoom-btn" id="lightboxZoomBtn" title="Toggle Zoom">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="m21 21-4.3-4.3"/>
+        <path d="M11 8v6M8 11h6"/>
+      </svg>
     </button>
   </div>
 
-  <script src="common.js"></script>
+  <script src="common.js?v=3"></script>
   <script>
     var topLoader = document.getElementById('topLoader');
     function showLoader() { topLoader.classList.add('active'); }
     function hideLoader() { topLoader.classList.remove('active'); }
 
-    var photos = [];
-    var currentSortType = 'nameAsc';
-    var currentLightboxIndex = 0;
-    var currentPhotoList = [];
-    var isZoomMode = false;
-    var zoomLevel = 1;
-    var panX = 0, panY = 0, isPanning = false, panStartX = 0, panStartY = 0;
+    let photos = [];
+    let currentSortType = 'newest';
+    let currentLightboxIndex = 0;
+    let currentPhotoList = [];
 
-    var galleryGrid = document.getElementById('galleryGrid');
-    var emptyState = document.getElementById('emptyState');
-    var lightbox = document.getElementById('lightbox');
-    var lightboxImg = document.getElementById('lightboxImg');
-    var lightboxImgWrap = document.getElementById('lightboxImgWrap');
-    var lightboxClose = document.getElementById('lightboxClose');
-    var lightboxPrev = document.getElementById('lightboxPrev');
-    var lightboxNext = document.getElementById('lightboxNext');
-    var lightboxInfoBtn = document.getElementById('lightboxInfoBtn');
-    var lightboxInfo = document.getElementById('lightboxInfo');
-    var lightboxZoomBtn = document.getElementById('lightboxZoomBtn');
-    var gallerySortSelect = document.getElementById('gallerySortSelect');
+    // --- Zoom / Magnifier ---
+    let isZoomMode = false;
+    let zoomLevel = 1;
+    let panX = 0, panY = 0, isPanning = false, panStartX = 0, panStartY = 0;
 
-    function renderGallery() {
-      showLoader();
-      var filteredPhotos = sortPhotos(photos, currentSortType);
+    const galleryGrid = document.getElementById('galleryGrid');
+    const emptyState = document.getElementById('emptyState');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const lightboxImgWrap = document.getElementById('lightboxImgWrap');
+    const lightboxClose = document.getElementById('lightboxClose');
+    const lightboxPrev = document.getElementById('lightboxPrev');
+    const lightboxNext = document.getElementById('lightboxNext');
+    const lightboxInfoBtn = document.getElementById('lightboxInfoBtn');
+    const lightboxInfo = document.getElementById('lightboxInfo');
+    const lightboxZoomBtn = document.getElementById('lightboxZoomBtn');
+    const lightboxDownloadBtn = document.getElementById('lightboxDownloadBtn');
+    const gallerySortSelect = document.getElementById('gallerySortSelect');
+
+    function safeFilename(photo) {
+      const base = (photo && photo.name) ? photo.name : 'photo';
+      const cleaned = String(base).trim().replace(/[\\/:*?"<>|]+/g, '-');
+      return cleaned || 'photo';
+    }
+
+    function detectFormat(photo) {
+      const src = (photo && photo.src) ? String(photo.src) : '';
+      if (!src) return '—';
+      const m = src.match(/\.([a-zA-Z0-9]+)(\?.*)?$/);
+      if (m && m[1]) return String(m[1]).toUpperCase();
+      return '—';
+    }
+
+    let lastGallerySig = '';
+
+    async function renderGallery(options = {}) {
+      const silent = !!options.silent;
+      if (!silent) showLoader();
+      const loaded = await loadStaticGalleryPhotos();
+      const sig = JSON.stringify(loaded || []);
+      if (silent && sig === lastGallerySig) {
+        if (!silent) hideLoader();
+        return;
+      }
+      lastGallerySig = sig;
+      photos = loaded || [];
+      const filteredPhotos = sortPhotos(photos, currentSortType);
 
       if (filteredPhotos.length === 0) {
         galleryGrid.style.display = 'none';
@@ -104,20 +151,26 @@
       galleryGrid.style.display = 'grid';
       emptyState.style.display = 'none';
 
-      galleryGrid.innerHTML = filteredPhotos.map(function(photo, index) {
-        var name = photo.name || 'Photo';
-        var truncName = name.length > 22 ? name.substring(0, 22) + '…' : name;
-        return '<div class="gallery-item" style="animation-delay: ' + Math.min(index * 0.03, 0.6) + 's" data-index="' + index + '">' +
-          '<img src="' + photo.src + '" alt="' + (photo.name || '') + '" loading="lazy">' +
-          '<div class="gallery-item-name">' + truncName + '</div></div>';
+      galleryGrid.innerHTML = filteredPhotos.map((photo, index) => {
+        const truncName = (photo.name || 'Untitled').length > 28
+          ? (photo.name || 'Untitled').substring(0, 28) + '…'
+          : (photo.name || 'Untitled');
+
+        return `
+          <div class="gallery-item" style="animation-delay: ${Math.min(index * 0.03, 0.6)}s" data-index="${index}">
+            <img src="${photo.src}" alt="${photo.name || ''}" loading="lazy">
+            <div class="gallery-item-name">${truncName}</div>
+          </div>`;
       }).join('');
 
-      galleryGrid.querySelectorAll('.gallery-item').forEach(function(item) {
-        item.addEventListener('click', function() {
-          var index = parseInt(item.dataset.index, 10);
+      document.querySelectorAll('.gallery-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const index = parseInt(item.dataset.index, 10);
           openLightbox(index, filteredPhotos);
         });
       });
+
+      currentPhotoList = filteredPhotos;
       hideLoader();
     }
 
@@ -133,19 +186,31 @@
     function updateLightboxContent() {
       var photo = currentPhotoList[currentLightboxIndex];
       if (!photo) return;
+
       lightboxImg.src = photo.src;
-      document.getElementById('lbInfoName').textContent = photo.name || '—';
-      var ext = (photo.name || '').split('.').pop();
-      document.getElementById('lbInfoFormat').textContent = ext ? ext.toUpperCase() : '—';
-      var tmpImg = new Image();
-      tmpImg.onload = function() {
-        var w = tmpImg.naturalWidth, h = tmpImg.naturalHeight;
-        document.getElementById('lbInfoRes').textContent = w + ' × ' + h;
-        var g = gcd(w, h);
-        document.getElementById('lbInfoAspect').textContent = (w/g) + ':' + (h/g);
+
+      lightboxDownloadBtn.href = photo.src;
+      const fmt = detectFormat(photo);
+      lightboxDownloadBtn.setAttribute('download', `${safeFilename(photo)}${fmt !== '—' ? '.' + fmt.toLowerCase() : ''}`);
+
+      // Info panel
+      document.getElementById('lbInfoName').textContent = photo.name || 'Untitled';
+      document.getElementById('lbInfoSize').textContent = '—';
+      document.getElementById('lbInfoDate').textContent = photo.date ? new Date(photo.date).toLocaleDateString() : '—';
+      document.getElementById('lbInfoFormat').textContent = detectFormat(photo);
+
+      // Resolution & aspect ratio (need image load)
+      const tmpImg = new Image();
+      tmpImg.onload = () => {
+        const w = tmpImg.naturalWidth, h = tmpImg.naturalHeight;
+        document.getElementById('lbInfoRes').textContent = `${w} × ${h}`;
+        const g = gcd(w, h);
+        document.getElementById('lbInfoAspect').textContent = `${w/g}:${h/g}`;
       };
       tmpImg.src = photo.src;
     }
+
+    function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 
     function closeLightbox() {
       lightbox.classList.remove('active');
@@ -153,6 +218,7 @@
       exitZoom();
     }
 
+    // --- Lightbox Controls ---
     lightboxClose.addEventListener('click', closeLightbox);
     lightboxPrev.addEventListener('click', function() {
       currentLightboxIndex = (currentLightboxIndex - 1 + currentPhotoList.length) % currentPhotoList.length;
@@ -229,55 +295,9 @@
     });
 
     setActiveNav();
-
-    // Load photos from GitHub API first, then fallback to localStorage
-    fetch('/.netlify/functions/load-photos')
-      .then(response => response.json())
-      .then(data => {
-        console.log('Gallery server response:', data);
-        
-        if (data.success && data.photos && data.photos.length > 0) {
-          photos = data.photos.map(function(photo) {
-            return { 
-              src: photo.image, 
-              name: photo.title || photo.name || photo.src.split('/').pop(),
-              category: photo.category || 'all',
-              description: photo.description || ''
-            };
-          });
-          console.log('Loaded photos from server:', photos.length);
-          renderGallery();
-        } else {
-          console.log('No photos on server, checking localStorage...');
-          // Fallback to localStorage
-          const galleryPhotos = JSON.parse(localStorage.getItem('galleryPhotos') || '[]');
-          photos = galleryPhotos.map(function(photo) {
-            return { 
-              src: photo.image, 
-              name: photo.title || photo.name || photo.src.split('/').pop(),
-              category: photo.category || 'all',
-              description: photo.description || ''
-            };
-          });
-          console.log('Loaded photos from localStorage:', photos.length);
-          renderGallery();
-        }
-      })
-      .catch(function(error) {
-        console.error('Error loading from server:', error);
-        // Fallback to localStorage
-        const galleryPhotos = JSON.parse(localStorage.getItem('galleryPhotos') || '[]');
-        photos = galleryPhotos.map(function(photo) {
-          return { 
-            src: photo.image, 
-            name: photo.title || photo.name || photo.src.split('/').pop(),
-            category: photo.category || 'all',
-            description: photo.description || ''
-          };
-        });
-        console.log('Error occurred, loaded photos from localStorage:', photos.length);
-        renderGallery();
-      });
+    renderGallery();
+    startLiveContentSync(renderGallery);
   </script>
 </body>
 </html>
+

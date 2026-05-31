@@ -1,0 +1,114 @@
+# Netlify CMS — edits the same JSON files the public site reads.
+# Public: gallery.html, albums.html, portfolio.html → photos/*.json
+
+backend:
+  name: git-gateway
+  branch: main
+
+site_url: https://photoportfolioweb.netlify.app
+display_url: https://photoportfolioweb.netlify.app
+show_preview_links: true
+
+media_folder: "photos/uploads"
+public_folder: "/photos/uploads"
+
+collections:
+  - name: "gallery"
+    label: "Gallery Photos"
+    files:
+      - name: "gallery-json"
+        label: "Gallery (gallery.html)"
+        file: "photos/gallery.json"
+        fields:
+          - name: "photos"
+            label: "Photos"
+            widget: list
+            summary: "{{fields.name}}"
+            fields:
+              - name: "id"
+                label: "ID"
+                widget: string
+                required: false
+              - name: "name"
+                label: "Name"
+                widget: string
+              - name: "src"
+                label: "Image"
+                widget: image
+              - name: "date"
+                label: "Date (for sorting)"
+                widget: datetime
+              - name: "description"
+                label: "Description (optional)"
+                widget: string
+                required: false
+
+  - name: "albums"
+    label: "Albums"
+    files:
+      - name: "albums-json"
+        label: "Albums (albums.html)"
+        file: "photos/albums.json"
+        fields:
+          - name: "albums"
+            label: "Albums"
+            widget: list
+            summary: "{{fields.name}}"
+            fields:
+              - name: "id"
+                label: "ID"
+                widget: string
+                required: false
+              - name: "name"
+                label: "Album name"
+                widget: string
+              - name: "photos"
+                label: "Photos in this album"
+                widget: list
+                fields:
+                  - name: "id"
+                    label: "ID"
+                    widget: string
+                    required: false
+                  - name: "name"
+                    label: "Name (optional)"
+                    widget: string
+                    required: false
+                  - name: "src"
+                    label: "Image"
+                    widget: image
+
+  - name: "portfolio"
+    label: "Portfolio"
+    files:
+      - name: "portfolio-json"
+        label: "Portfolio (portfolio.html)"
+        file: "photos/portfolio.json"
+        fields:
+          - name: "items"
+            label: "Portfolio items"
+            widget: list
+            summary: "{{fields.title}}"
+            fields:
+              - name: "id"
+                label: "ID"
+                widget: string
+                required: false
+              - name: "title"
+                label: "Title"
+                widget: string
+              - name: "src"
+                label: "Image"
+                widget: image
+              - name: "description"
+                label: "Description (optional)"
+                widget: string
+                required: false
+              - name: "createdAt"
+                label: "Created date"
+                widget: datetime
+              - name: "order"
+                label: "Order (lower shows first)"
+                widget: number
+                value_type: int
+                default: 0

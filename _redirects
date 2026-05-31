@@ -1,2 +1,1 @@
-# Netlify Functions are handled automatically — no redirects needed
-# Do NOT add a catch-all /* redirect as it would intercept function calls
+# Do not SPA-fallback JSON or image paths (public site is static HTML + JSON).

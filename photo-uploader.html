@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="refresh" content="0; url=/admin-bbpews098ge8ht4ez4xdeg/">
+  <title>Redirecting to Admin…</title>
+  <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body class="container page-main">
+  <h1>Uploads moved to Admin</h1>
+  <p>This page used to save photos only on <strong>this device</strong>. That is why phones and laptops showed different pictures.</p>
+  <p>All visitors now see the same photos from the admin panel (saved to GitHub for everyone).</p>
+  <p><a class="cta-button" href="/admin-bbpews098ge8ht4ez4xdeg/">Open admin panel</a></p>
+  <script>
+    ['portfolioPhotos', 'portfolioAlbums', 'portfolioCurrentAlbum', 'portfolioSavedAlbums', 'portfolioItems'].forEach(function (k) {
+      try { localStorage.removeItem(k); } catch (e) {}
+    });
+    location.replace('/admin-bbpews098ge8ht4ez4xdeg/');
+  </script>
+</body>
+</html>

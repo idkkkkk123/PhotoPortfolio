@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photography Portfolio</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=3">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 </head>
 <body>
     <!-- Navigation -->
@@ -14,23 +15,29 @@
             <a class="nav-btn" href="index.html">Home</a>
             <a class="nav-btn" href="gallery.html">Gallery</a>
             <a class="nav-btn" href="albums.html">Albums</a>
+            <a class="nav-btn" href="portfolio.html">Portfolio</a>
         </div>
     </nav>
 
     <!-- Hero Section -->
     <section class="hero" id="hero">
+        <!-- Soft gradient orbs -->
         <div class="hero-orb hero-orb-1"></div>
         <div class="hero-orb hero-orb-2"></div>
         <div class="hero-orb hero-orb-3"></div>
+        <!-- Film grain texture -->
         <div class="hero-grain"></div>
+        <!-- Decorative dot patterns -->
         <div class="decorative-element decorative-element-1"></div>
         <div class="decorative-element decorative-element-2"></div>
+        <!-- Polaroid accents -->
         <div class="hero-polaroid hero-polaroid-1">
             <div class="hero-polaroid-inner"></div>
         </div>
         <div class="hero-polaroid hero-polaroid-2">
             <div class="hero-polaroid-inner"></div>
         </div>
+        <!-- Camera aperture accent -->
         <svg class="hero-aperture" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="0.5" opacity="0.08"/>
             <circle cx="50" cy="50" r="30" stroke="currentColor" stroke-width="0.5" opacity="0.06"/>
@@ -45,9 +52,26 @@
             <p>A Collection of <span class="hero-word-rotate"><span>Moments</span><span>Memories</span><span>Visions</span><span>Dreams</span><span>Moments</span></span></p>
             <a href="gallery.html" class="cta-button">View Gallery</a>
         </div>
+        <!-- Info button -->
         <button class="hero-info-btn" id="infoBtn" title="About this site">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         </button>
+    </section>
+
+    <section class="home-portfolio container" id="homePortfolioSection" aria-labelledby="homePortfolioHeading">
+        <div class="section-header home-portfolio-header">
+            <div>
+                <h2 id="homePortfolioHeading">Portfolio</h2>
+                <p class="section-subtitle">Featured work from the admin panel — same for every visitor.</p>
+            </div>
+            <a href="portfolio.html" class="cta-button cta-button-outline">View all</a>
+        </div>
+        <div class="home-portfolio-grid" id="homePortfolioGrid"></div>
+        <div class="empty-state home-portfolio-empty" id="homePortfolioEmpty" style="display: none;">
+            <div class="empty-state-icon">🎨</div>
+            <div class="empty-state-text">No portfolio items yet</div>
+            <div class="empty-state-hint">Add items under <strong>Portfolio</strong> in the admin panel, then Publish.</div>
+        </div>
     </section>
 
     <!-- Info Modal -->
@@ -56,102 +80,155 @@
             <button class="info-modal-close" id="infoModalClose">&times;</button>
             <p class="info-greeting">Dear Visitor,</p>
             <p>Thank you for taking the time to view this website.</p>
-            <p>This is a static photography portfolio. Photos are organised in the Gallery and in Albums. I hope you enjoy the collection.</p>
+            <p>Please note that this site is currently still in production. It is an experimental project of mine and is not yet close to being fully completed. Some features may be unfinished, and certain sections may change as development continues.</p>
+            <p>I plan to make ongoing improvements and updates in the future, so please check back later to see the progress.</p>
+            <p>Thank you for your understanding and support.</p>
             <p class="info-sign">Kind regards,<br><strong>Kurt Santos</strong></p>
         </div>
     </div>
 
-    <!-- Tutorial Overlay (optional first-visit tour) -->
+    <!-- Tutorial Overlay -->
     <div class="tour-overlay" id="tourOverlay"></div>
     <div class="tour-tooltip" id="tourTooltip">
-        <div class="tour-tooltip-arrow" id="tourArrow"></div>
-        <div class="tour-tooltip-step" id="tourIndicator"></div>
-        <h4 class="tour-tooltip-title" id="tourTitle"></h4>
-        <p class="tour-tooltip-text" id="tourText"></p>
-        <div class="tour-tooltip-actions">
-            <button class="tour-skip" id="tourSkip">Skip</button>
-            <button class="tour-next" id="tourNext">Next</button>
-        </div>
+      <div class="tour-tooltip-arrow" id="tourArrow"></div>
+      <div class="tour-tooltip-step" id="tourIndicator"></div>
+      <h4 class="tour-tooltip-title" id="tourTitle"></h4>
+      <p class="tour-tooltip-text" id="tourText"></p>
+      <div class="tour-tooltip-actions">
+        <button class="tour-skip" id="tourSkip">Skip</button>
+        <button class="tour-next" id="tourNext">Next</button>
+      </div>
     </div>
 
-    <script src="common.js"></script>
+    <script src="common.js?v=3"></script>
     <script>
         setActiveNav();
 
-        var tourSteps = [
-            { target: '.hero-content h1', title: 'Welcome', text: 'A quick tour of this photography portfolio.' },
-            { target: '.nav-btn[href="gallery.html"]', title: 'Gallery', text: 'View all photos in a clean grid.' },
-            { target: '.nav-btn[href="albums.html"]', title: 'Albums', text: 'Browse photos by collection.' },
-            { target: '.cta-button', title: 'Ready', text: 'Head to the gallery to explore.' }
+        let lastHomePortfolioSig = '';
+
+        async function renderHomePortfolio(options = {}) {
+            const grid = document.getElementById('homePortfolioGrid');
+            const empty = document.getElementById('homePortfolioEmpty');
+            const items = await loadStaticPortfolioItems();
+            const sig = JSON.stringify(items || []);
+            if (options.silent && sig === lastHomePortfolioSig) return;
+            lastHomePortfolioSig = sig;
+
+            if (!items || items.length === 0) {
+                grid.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            const sorted = [...items].sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 6);
+
+            grid.innerHTML = sorted.map((item) => `
+                <a class="home-portfolio-card" href="portfolio.html">
+                    <img src="${item.src}" alt="${item.title || ''}" loading="lazy">
+                    <span class="home-portfolio-card-title">${item.title || 'Untitled'}</span>
+                </a>
+            `).join('');
+        }
+
+        renderHomePortfolio();
+        startLiveContentSync(renderHomePortfolio);
+
+        // --- Tutorial / Guide (first visit only) ---
+        const tourSteps = [
+          { target: '.hero-content h1', title: 'Welcome', text: 'A quick tour of your photography workspace. Only shows once.' },
+          { target: '.nav-btn[href="gallery.html"]', title: 'Gallery', text: 'View, sort, and manage all your photos.' },
+          { target: '.nav-btn[href="albums.html"]', title: 'Albums', text: 'Organise photos into folders.' },
+          { target: '.nav-btn[href="portfolio.html"]', title: 'Portfolio', text: 'Showcase your featured photos in large immersive frames.' },
+          { target: '.cta-button', title: 'Ready!', text: 'Start by exploring the gallery.' }
         ];
 
-        var tourStep = 0;
-        var tourOverlay = document.getElementById('tourOverlay');
-        var tourTooltip = document.getElementById('tourTooltip');
-        var tourArrow = document.getElementById('tourArrow');
+        let tourStep = 0;
+        const tourOverlay = document.getElementById('tourOverlay');
+        const tourTooltip = document.getElementById('tourTooltip');
+        const tourArrow = document.getElementById('tourArrow');
 
         function showTour() {
-            if (localStorage.getItem(STORAGE_KEYS.tutorialDone)) return;
-            tourStep = 0;
-            tourOverlay.classList.add('active');
-            tourTooltip.classList.add('active');
-            positionTooltip();
+          if (localStorage.getItem(STORAGE_KEYS.tutorialDone)) return;
+          tourStep = 0;
+          tourOverlay.classList.add('active');
+          tourTooltip.classList.add('active');
+          positionTooltip();
         }
 
         function positionTooltip() {
-            var s = tourSteps[tourStep];
-            var el = document.querySelector(s.target);
-            document.getElementById('tourTitle').textContent = s.title;
-            document.getElementById('tourText').textContent = s.text;
-            document.getElementById('tourIndicator').textContent = (tourStep + 1) + ' / ' + tourSteps.length;
-            document.getElementById('tourNext').textContent = tourStep === tourSteps.length - 1 ? 'Get Started' : 'Next';
-            document.querySelectorAll('.tour-highlight').forEach(function(e) { e.classList.remove('tour-highlight'); });
-            if (!el) return;
-            el.classList.add('tour-highlight');
-            var rect = el.getBoundingClientRect();
-            var ttW = 280;
-            var ttH = tourTooltip.offsetHeight || 160;
-            var left = rect.left + rect.width / 2 - ttW / 2;
-            var top = rect.bottom + 14;
-            var arrowSide = 'top';
-            if (top + ttH > window.innerHeight - 20) {
-                top = rect.top - ttH - 14;
-                arrowSide = 'bottom';
-            }
-            left = Math.max(12, Math.min(window.innerWidth - ttW - 12, left));
-            tourTooltip.style.left = left + 'px';
-            tourTooltip.style.top = top + 'px';
-            tourTooltip.style.width = ttW + 'px';
-            tourArrow.className = 'tour-tooltip-arrow tour-arrow-' + arrowSide;
-            var arrowLeft = Math.max(16, Math.min(ttW - 16, rect.left + rect.width / 2 - left));
-            tourArrow.style.left = arrowLeft + 'px';
+          const s = tourSteps[tourStep];
+          const el = document.querySelector(s.target);
+          document.getElementById('tourTitle').textContent = s.title;
+          document.getElementById('tourText').textContent = s.text;
+          document.getElementById('tourIndicator').textContent = `${tourStep + 1} / ${tourSteps.length}`;
+          document.getElementById('tourNext').textContent = tourStep === tourSteps.length - 1 ? 'Get Started' : 'Next';
+
+          // Remove old highlight
+          document.querySelectorAll('.tour-highlight').forEach(e => e.classList.remove('tour-highlight'));
+
+          if (!el) return;
+          el.classList.add('tour-highlight');
+
+          const rect = el.getBoundingClientRect();
+          const ttW = 280;
+          const ttH = tourTooltip.offsetHeight || 160;
+
+          // Position below the target, centered
+          let left = rect.left + rect.width / 2 - ttW / 2;
+          let top = rect.bottom + 14;
+          let arrowSide = 'top';
+
+          // If tooltip goes off bottom, show above
+          if (top + ttH > window.innerHeight - 20) {
+            top = rect.top - ttH - 14;
+            arrowSide = 'bottom';
+          }
+          // Clamp horizontal
+          left = Math.max(12, Math.min(window.innerWidth - ttW - 12, left));
+
+          tourTooltip.style.left = left + 'px';
+          tourTooltip.style.top = top + 'px';
+          tourTooltip.style.width = ttW + 'px';
+          tourArrow.className = 'tour-tooltip-arrow tour-arrow-' + arrowSide;
+
+          // Position arrow horizontally to point at target center
+          const arrowLeft = Math.max(16, Math.min(ttW - 16, rect.left + rect.width / 2 - left));
+          tourArrow.style.left = arrowLeft + 'px';
         }
 
-        document.getElementById('tourNext').addEventListener('click', function() {
-            tourStep++;
-            if (tourStep >= tourSteps.length) closeTour();
-            else positionTooltip();
+        document.getElementById('tourNext').addEventListener('click', () => {
+          tourStep++;
+          if (tourStep >= tourSteps.length) {
+            closeTour();
+          } else {
+            positionTooltip();
+          }
         });
+
         document.getElementById('tourSkip').addEventListener('click', closeTour);
         tourOverlay.addEventListener('click', closeTour);
 
         function closeTour() {
-            tourOverlay.classList.remove('active');
-            tourTooltip.classList.remove('active');
-            document.querySelectorAll('.tour-highlight').forEach(function(e) { e.classList.remove('tour-highlight'); });
-            localStorage.setItem(STORAGE_KEYS.tutorialDone, '1');
+          tourOverlay.classList.remove('active');
+          tourTooltip.classList.remove('active');
+          document.querySelectorAll('.tour-highlight').forEach(e => e.classList.remove('tour-highlight'));
+          localStorage.setItem(STORAGE_KEYS.tutorialDone, '1');
         }
 
-        window.addEventListener('resize', function() {
-            if (tourTooltip.classList.contains('active')) positionTooltip();
+        window.addEventListener('resize', () => {
+          if (tourTooltip.classList.contains('active')) positionTooltip();
         });
+
+        // Delay slightly so nav animation finishes
         setTimeout(showTour, 900);
 
-        var infoModal = document.getElementById('infoModal');
-        document.getElementById('infoBtn').addEventListener('click', function() { infoModal.classList.add('active'); });
-        document.getElementById('infoModalClose').addEventListener('click', function() { infoModal.classList.remove('active'); });
-        infoModal.addEventListener('click', function(e) { if (e.target === infoModal) infoModal.classList.remove('active'); });
-        document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && infoModal.classList.contains('active')) infoModal.classList.remove('active'); });
+        // --- Info Modal ---
+        const infoModal = document.getElementById('infoModal');
+        document.getElementById('infoBtn').addEventListener('click', () => infoModal.classList.add('active'));
+        document.getElementById('infoModalClose').addEventListener('click', () => infoModal.classList.remove('active'));
+        infoModal.addEventListener('click', e => { if (e.target === infoModal) infoModal.classList.remove('active'); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && infoModal.classList.contains('active')) infoModal.classList.remove('active'); });
     </script>
 </body>
 </html>

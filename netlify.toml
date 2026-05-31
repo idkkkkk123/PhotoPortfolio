@@ -2,7 +2,18 @@
   publish = "."
   functions = "netlify/functions"
 
-# HTML pages — revalidate
+# Secret admin URL → standard /admin/ folder (optional shortcut)
+[[redirects]]
+  from = "/admin"
+  to = "/admin-bbpews098ge8ht4ez4xdeg/"
+  status = 302
+
+[[redirects]]
+  from = "/admin/"
+  to = "/admin-bbpews098ge8ht4ez4xdeg/"
+  status = 302
+
+# HTML pages — always revalidate
 [[headers]]
   for = "/*.html"
   [headers.values]
@@ -17,17 +28,29 @@
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
-# JS — short cache with revalidation
+# JS — do not pin forever (old bundle caused per-device / stale behavior)
 [[headers]]
   for = "/*.js"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
-# Images — long cache
+# CMS data — always fetch fresh after a deploy
+[[headers]]
+  for = "/photos/*.json"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Uploaded photos — revalidate so new CMS uploads show everywhere
+[[headers]]
+  for = "/photos/uploads/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Other images
 [[headers]]
   for = "/*.{png,jpg,jpeg,gif,svg,webp,ico,avif}"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=86400, must-revalidate"
 
 # JSON data
 [[headers]]
