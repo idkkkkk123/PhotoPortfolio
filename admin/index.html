@@ -1,37 +1,63 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Photo site admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f4f4f5;
+      color: #18181b;
+    }
+    .admin-gate {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .admin-gate-card {
+      max-width: 420px;
+      width: 100%;
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+    .admin-gate-card h1 { margin: 0 0 0.75rem; font-size: 1.5rem; }
+    .admin-gate-card p { margin: 0 0 1.25rem; color: #52525b; line-height: 1.5; }
+    .admin-gate-btn {
+      width: 100%;
+      padding: 0.85rem;
+      border: none;
+      border-radius: 10px;
+      background: #18181b;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .admin-gate-error { margin-top: 1rem; color: #b91c1c; font-size: 0.875rem; }
+    .admin-gate[hidden] { display: none !important; }
+  </style>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script src="https://unpkg.com/netlify-cms-app@^2.15.72/dist/netlify-cms-app.js"></script>
-  <script>
-    window.CMS_MANUAL_INIT = true;
-  </script>
+  <script src="https://unpkg.com/decap-cms@3.1.11/dist/decap-cms.js"></script>
 </head>
 <body>
+  <div id="admin-gate" class="admin-gate">
+    <div class="admin-gate-card">
+      <h1>Photo site admin</h1>
+      <p>Log in to edit content. Redirecting to the main admin URL…</p>
+      <p class="admin-gate-error" id="admin-gate-error" hidden></p>
+    </div>
+  </div>
   <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      const netlifyIdentity = window.netlifyIdentity;
-
-      if (!netlifyIdentity) {
-        window.CMS.init();
-        return;
-      }
-
-      netlifyIdentity.on('init', (user) => {
-        if (user) window.CMS.init();
-      });
-
-      netlifyIdentity.on('login', () => {
-        window.CMS.init();
-      });
-
-      netlifyIdentity.init();
-    });
+    window.location.replace('/admin-bbpews098ge8ht4ez4xdeg/');
   </script>
 </body>
 </html>
-
