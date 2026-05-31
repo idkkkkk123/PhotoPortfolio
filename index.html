@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photography Portfolio</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=3">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 </head>
 <body>
     <!-- Navigation -->
@@ -57,6 +58,22 @@
         </button>
     </section>
 
+    <section class="home-portfolio container" id="homePortfolioSection" aria-labelledby="homePortfolioHeading">
+        <div class="section-header home-portfolio-header">
+            <div>
+                <h2 id="homePortfolioHeading">Portfolio</h2>
+                <p class="section-subtitle">Featured work from the admin panel — same for every visitor.</p>
+            </div>
+            <a href="portfolio.html" class="cta-button cta-button-outline">View all</a>
+        </div>
+        <div class="home-portfolio-grid" id="homePortfolioGrid"></div>
+        <div class="empty-state home-portfolio-empty" id="homePortfolioEmpty" style="display: none;">
+            <div class="empty-state-icon">🎨</div>
+            <div class="empty-state-text">No portfolio items yet</div>
+            <div class="empty-state-hint">Add items under <strong>Portfolio</strong> in the admin panel, then Publish.</div>
+        </div>
+    </section>
+
     <!-- Info Modal -->
     <div class="info-modal" id="infoModal">
         <div class="info-modal-content">
@@ -83,9 +100,39 @@
       </div>
     </div>
 
-    <script src="common.js"></script>
+    <script src="common.js?v=3"></script>
     <script>
         setActiveNav();
+
+        let lastHomePortfolioSig = '';
+
+        async function renderHomePortfolio(options = {}) {
+            const grid = document.getElementById('homePortfolioGrid');
+            const empty = document.getElementById('homePortfolioEmpty');
+            const items = await loadStaticPortfolioItems();
+            const sig = JSON.stringify(items || []);
+            if (options.silent && sig === lastHomePortfolioSig) return;
+            lastHomePortfolioSig = sig;
+
+            if (!items || items.length === 0) {
+                grid.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            const sorted = [...items].sort((a, b) => (a.order || 0) - (b.order || 0)).slice(0, 6);
+
+            grid.innerHTML = sorted.map((item) => `
+                <a class="home-portfolio-card" href="portfolio.html">
+                    <img src="${item.src}" alt="${item.title || ''}" loading="lazy">
+                    <span class="home-portfolio-card-title">${item.title || 'Untitled'}</span>
+                </a>
+            `).join('');
+        }
+
+        renderHomePortfolio();
+        startLiveContentSync(renderHomePortfolio);
 
         // --- Tutorial / Guide (first visit only) ---
         const tourSteps = [

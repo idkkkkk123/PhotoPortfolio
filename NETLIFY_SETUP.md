@@ -21,6 +21,17 @@ Visitors never log in. Only invited users can open the admin URL.
 **Admin URL (use this one):**  
 https://photoportfolioweb.netlify.app/admin-bbpews098ge8ht4ez4xdeg/
 
+## One shared source for every device (not browser storage)
+
+Photos are **not** stored in your phone or laptop browser anymore. They live in:
+
+- `photos/gallery.json`, `photos/albums.json`, `photos/portfolio.json` on **GitHub** (your shared “database”)
+- Image files in `photos/uploads/`
+
+Every visitor loads those same files. The site clears old `localStorage` keys (`portfolioPhotos`, etc.) automatically.
+
+**Only use the admin panel to add photos** — do not use `photo-uploader.html` (it redirected / removed).
+
 ## Fast updates (photos show in ~seconds, not after full deploy)
 
 Public pages (`gallery.html`, `albums.html`, `portfolio.html`) load data from **GitHub first**, then fall back to the Netlify site. When you click **Publish** in CMS:

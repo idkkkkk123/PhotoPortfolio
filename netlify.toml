@@ -27,11 +27,11 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# JS — cache with revalidation
+# JS — do not pin forever (old bundle caused per-device / stale behavior)
 [[headers]]
   for = "/*.js"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 # CMS data — always fetch fresh after a deploy
 [[headers]]
@@ -39,11 +39,17 @@
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
-# Images — long cache
+# Uploaded photos — revalidate so new CMS uploads show everywhere
+[[headers]]
+  for = "/photos/uploads/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Other images
 [[headers]]
   for = "/*.{png,jpg,jpeg,gif,svg,webp,ico}"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=86400, must-revalidate"
 
 # Fonts — long cache
 [[headers]]

@@ -1,116 +1,31 @@
+// Bump when deploying so browsers fetch fresh common.js (see script tags ?v=).
+const COMMON_JS_VERSION = '3';
+
 const STORAGE_KEYS = {
-    photos: 'portfolioPhotos',
-    albums: 'portfolioAlbums',
-    currentAlbum: 'portfolioCurrentAlbum',
-    savedAlbums: 'portfolioSavedAlbums',
-    portfolio: 'portfolioItems',
-    tutorialDone: 'portfolioTutorialDone'
-  };
+  tutorialDone: 'portfolioTutorialDone'
+};
 
-  // =====================================================
-  // STORAGE SERVICE ABSTRACTION (Future-proof for database)
-  // =====================================================
-  class StorageService {
-    async getPhotos() { throw new Error('Not implemented'); }
-    async savePhoto(photo) { throw new Error('Not implemented'); }
-    async deletePhoto(id) { throw new Error('Not implemented'); }
+const LEGACY_LOCAL_KEYS = [
+  'portfolioPhotos',
+  'portfolioAlbums',
+  'portfolioCurrentAlbum',
+  'portfolioSavedAlbums',
+  'portfolioItems'
+];
 
-    async getAlbums() { throw new Error('Not implemented'); }
-    async saveAlbum(album) { throw new Error('Not implemented'); }
-    async deleteAlbum(id) { throw new Error('Not implemented'); }
-
-    async getCurrentAlbum() { throw new Error('Not implemented'); }
-    async setCurrentAlbum(id) { throw new Error('Not implemented'); }
-
+/** Remove old per-device photo data so every visitor sees the same CMS/GitHub content. */
+function clearLegacyLocalPhotoData() {
+  try {
+    LEGACY_LOCAL_KEYS.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    /* ignore */
   }
+}
 
-  // =====================================================
-  // LOCAL STORAGE SERVICE (Current implementation)
-  // =====================================================
-  class LocalStorageService extends StorageService {
-    async getPhotos() {
-      const raw = localStorage.getItem(STORAGE_KEYS.photos);
-      if (!raw) return [];
-      try {
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    }
+clearLegacyLocalPhotoData();
 
-    async savePhoto(photo) {
-      const photos = await this.getPhotos();
-      const index = photos.findIndex(p => p.id === photo.id);
-      if (index !== -1) {
-        photos[index] = photo;
-      } else {
-        photos.unshift(photo);
-      }
-      localStorage.setItem(STORAGE_KEYS.photos, JSON.stringify(photos));
-      return photo;
-    }
-
-    async deletePhoto(id) {
-      const photos = await this.getPhotos();
-      const filtered = photos.filter(p => p.id !== id);
-      localStorage.setItem(STORAGE_KEYS.photos, JSON.stringify(filtered));
-      return filtered;
-    }
-
-    async getAlbums() {
-      const raw = localStorage.getItem(STORAGE_KEYS.savedAlbums);
-      return raw ? JSON.parse(raw) : [];
-    }
-
-    async saveAlbum(album) {
-      const albums = await this.getAlbums();
-      const index = albums.findIndex(a => a.id === album.id);
-      if (index !== -1) {
-        albums[index] = album;
-      } else {
-        albums.push(album);
-      }
-      localStorage.setItem(STORAGE_KEYS.savedAlbums, JSON.stringify(albums));
-      return album;
-    }
-
-    async deleteAlbum(id) {
-      const albums = await this.getAlbums();
-      const filtered = albums.filter(a => a.id !== id);
-      localStorage.setItem(STORAGE_KEYS.savedAlbums, JSON.stringify(filtered));
-      return filtered;
-    }
-
-    async getCurrentAlbum() {
-      return localStorage.getItem(STORAGE_KEYS.currentAlbum) || 'all';
-    }
-
-    async setCurrentAlbum(id) {
-      localStorage.setItem(STORAGE_KEYS.currentAlbum, id);
-    }
-
-  }
-
-  // Initialize storage service.
-  const storage = new LocalStorageService();
-  
-  function loadPhotos() {
-    const raw = localStorage.getItem(STORAGE_KEYS.photos);
-    if (!raw) return [];
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-  
-  function savePhotos(photos) {
-    localStorage.setItem(STORAGE_KEYS.photos, JSON.stringify(photos));
-  }
-
-// After CMS Publish, GitHub updates in seconds; Netlify deploy can take 1–2 min.
+// Shared "database": JSON files in GitHub (photos/gallery.json, albums.json, portfolio.json).
+// Netlify CMS writes there; all devices read the same files — not localStorage.
 // When enabled, public pages read from GitHub first so new uploads show ASAP.
 const SITE_CONTENT = {
   github: {
@@ -119,7 +34,8 @@ const SITE_CONTENT = {
     branch: 'main',
     enabled: true
   },
-  liveRefreshMs: 15000
+  liveRefreshMs: 15000,
+  cacheVersion: COMMON_JS_VERSION
 };
 
 function githubRawUrl(relativePath) {
@@ -128,21 +44,22 @@ function githubRawUrl(relativePath) {
   return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
 }
 
-function resolveMediaUrl(src) {
+function resolveMediaUrl(src, entry) {
   if (!src) return src;
-  const s = String(src);
-  if (/^https?:\/\//i.test(s)) return s;
-  if (SITE_CONTENT.github.enabled && s.startsWith('/photos/')) {
-    return githubRawUrl(s);
+  let s = String(src);
+  if (!/^https?:\/\//i.test(s) && SITE_CONTENT.github.enabled && s.startsWith('/photos/')) {
+    s = githubRawUrl(s);
   }
-  return s;
+  const bust = (entry && (entry.id || entry.date || entry.createdAt)) || SITE_CONTENT.cacheVersion;
+  const sep = s.includes('?') ? '&' : '?';
+  return `${s}${sep}cb=${encodeURIComponent(String(bust))}`;
 }
 
 function normalizePhotoEntry(entry) {
   if (!entry) return entry;
-  if (typeof entry === 'string') return resolveMediaUrl(entry);
+  if (typeof entry === 'string') return resolveMediaUrl(entry, null);
   if (typeof entry === 'object' && entry.src) {
-    return { ...entry, src: resolveMediaUrl(entry.src) };
+    return { ...entry, src: resolveMediaUrl(entry.src, entry) };
   }
   return entry;
 }
@@ -165,21 +82,28 @@ async function fetchJson(url) {
 
 async function loadJson(relativePath) {
   const path = String(relativePath).replace(/^\//, '');
-  const sources = [];
-  if (SITE_CONTENT.github.enabled) {
-    sources.push(githubRawUrl(path));
-  }
-  sources.push(path);
+  const tasks = [];
 
-  for (const url of sources) {
-    try {
-      const data = await fetchJson(url);
-      if (data != null) return data;
-    } catch {
-      /* try next source */
-    }
+  if (SITE_CONTENT.github.enabled) {
+    tasks.push(
+      fetchJson(githubRawUrl(path))
+        .then((data) => ({ source: 'github', data }))
+        .catch(() => ({ source: 'github', data: null }))
+    );
   }
-  return null;
+
+  tasks.push(
+    fetchJson(path)
+      .then((data) => ({ source: 'site', data }))
+      .catch(() => ({ source: 'site', data: null }))
+  );
+
+  const results = await Promise.all(tasks);
+  const fromGithub = results.find((r) => r.source === 'github' && r.data != null);
+  const fromSite = results.find((r) => r.source === 'site' && r.data != null);
+
+  if (fromGithub) return fromGithub.data;
+  return fromSite ? fromSite.data : null;
 }
 
 async function loadStaticGalleryPhotos() {
@@ -233,33 +157,6 @@ function startLiveContentSync(refreshFn, intervalMs) {
     }
   };
 }
-  
-  function loadAlbums() {
-    const raw = localStorage.getItem(STORAGE_KEYS.albums);
-    if (!raw) return [{ id: 'all', name: 'All Photos' }];
-    try {
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        return [{ id: 'all', name: 'All Photos' }];
-      }
-      const hasAll = parsed.some(a => a && a.id === 'all');
-      return hasAll ? parsed : [{ id: 'all', name: 'All Photos' }, ...parsed];
-    } catch {
-      return [{ id: 'all', name: 'All Photos' }];
-    }
-  }
-  
-  function saveAlbums(albums) {
-    localStorage.setItem(STORAGE_KEYS.albums, JSON.stringify(albums));
-  }
-  
-  function loadCurrentAlbum() {
-    return localStorage.getItem(STORAGE_KEYS.currentAlbum) || 'all';
-  }
-  
-  function saveCurrentAlbum(albumId) {
-    localStorage.setItem(STORAGE_KEYS.currentAlbum, albumId);
-  }
   
   function fileToDataURL(file) {
     return new Promise((resolve, reject) => {
