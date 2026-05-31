@@ -9,19 +9,20 @@
   <link rel="stylesheet" href="admin-styles.css">
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script src="/identity-invite.js"></script>
-  <script src="admin-api.js?v=2"></script>
-  <script src="admin-auth.js"></script>
+  <script src="admin-api.js?v=3"></script>
+  <script src="admin-auth.js?v=2"></script>
+  <script src="admin-chrome.js"></script>
 </head>
 <body>
   <!-- Navigation -->
   <nav class="nav glass">
     <div class="nav-container">
       <a class="nav-btn" href="index.html">Home</a>
-      <a class="nav-btn" href="gallery.html">Gallery</a>
       <a class="nav-btn active" href="upload.html">Upload</a>
+      <a class="nav-btn" href="gallery.html">Gallery</a>
       <a class="nav-btn" href="display.html">Display</a>
       <a class="nav-btn" href="albums.html">Albums</a>
-      <a class="nav-btn" href="../portfolio.html">Portfolio</a>
+      <a class="nav-btn" href="../index.html">View site</a>
     </div>
   </nav>
 
@@ -87,7 +88,7 @@
     </section>
   </main>
 
-  <script src="../common.js"></script>
+  <script src="../common.js?v=3"></script>
   <script>
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
@@ -338,9 +339,10 @@
         const truncName = (photo.name || 'Untitled').length > 22
           ? (photo.name || 'Untitled').substring(0, 22) + '…'
           : (photo.name || 'Untitled');
+        const imgSrc = typeof resolveMediaUrl === 'function' ? resolveMediaUrl(photo.src, photo) : photo.src;
         return `
         <div class="gallery-item" style="animation-delay: ${Math.min(index * 0.03, 0.6)}s" data-id="${photo.id}">
-          <img src="${photo.src}" alt="${photo.name}" loading="lazy">
+          <img src="${imgSrc}" alt="${photo.name}" loading="lazy">
           <div class="gallery-item-name">${truncName}</div>
         </div>`;
       }).join('');
@@ -363,8 +365,8 @@
       renderRecent();
     });
 
-    setActiveNav();
     window.addEventListener('admin-auth-ready', function () {
+      if (typeof setActiveNav === 'function') setActiveNav();
       renderRecent();
     });
   </script>

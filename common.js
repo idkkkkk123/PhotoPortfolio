@@ -171,11 +171,16 @@ function startLiveContentSync(refreshFn, intervalMs) {
     const current = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
     document.querySelectorAll('.nav-btn[href]').forEach(link => {
       const href = (link.getAttribute('href') || '').toLowerCase();
-      if (href === current) {
+      const file = href.split('/').pop();
+      if (file === current) {
         link.classList.add('active');
+      } else {
+        link.classList.remove('active');
       }
     });
   }
+
+  window.setActiveNav = setActiveNav;
 
   // =====================================================
   // PHOTO SORTING
@@ -184,6 +189,8 @@ function startLiveContentSync(refreshFn, intervalMs) {
     const sorted = [...photos];
 
     switch(sortType) {
+      case 'saved':
+        return sorted;
       case 'newest':
         return sorted.sort((a, b) => {
           const dateA = a.date ? new Date(a.date) : new Date(0);

@@ -29,6 +29,7 @@
       <div class="filter-controls">
         <label for="gallerySortSelect">Sort by:</label>
         <select id="gallerySortSelect">
+          <option value="saved">Gallery order</option>
           <option value="newest">Newest First</option>
           <option value="oldest">Oldest First</option>
           <option value="nameAsc">A to Z</option>
@@ -89,7 +90,7 @@
     function hideLoader() { topLoader.classList.remove('active'); }
 
     let photos = [];
-    let currentSortType = 'newest';
+    let currentSortType = 'saved';
     let currentLightboxIndex = 0;
     let currentPhotoList = [];
 

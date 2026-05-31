@@ -73,6 +73,84 @@
     justify-content: flex-end;
 }
 
+.admin-btn-danger {
+    background: #e74c3c !important;
+}
+
+.admin-gallery-hint {
+    margin: -0.5rem 0 1.5rem;
+    font-size: 0.9rem;
+    opacity: 0.85;
+    line-height: 1.5;
+}
+
+.admin-gallery-hint a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+.admin-save-status {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #16a34a;
+}
+
+.admin-save-status-error {
+    color: #b91c1c;
+}
+
+.admin-gallery-grid .gallery-item {
+    position: relative;
+    cursor: grab;
+}
+
+.admin-gallery-item.admin-dragging {
+    opacity: 0.5;
+}
+
+.admin-gallery-item.admin-drag-over {
+    outline: 2px dashed #18181b;
+    outline-offset: 4px;
+}
+
+.admin-drag-handle {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 11;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 0.15rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    letter-spacing: -2px;
+    pointer-events: none;
+}
+
+.admin-gallery-moves {
+    position: absolute;
+    bottom: 2.5rem;
+    right: 0.5rem;
+    z-index: 11;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.admin-move-btn {
+    border: none;
+    background: rgba(24, 24, 27, 0.85);
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.admin-move-btn:hover {
+    background: #000;
+}
+
 .gallery-item-checkbox {
     position: absolute;
     top: 0.5rem;

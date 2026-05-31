@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gallery</title>
+  <title>Gallery — Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="../style.css?v=3">
   <link rel="stylesheet" href="admin-styles.css">
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script src="/identity-invite.js"></script>
-  <script src="admin-api.js?v=2"></script>
-  <script src="admin-auth.js"></script>
+  <script src="admin-api.js?v=3"></script>
+  <script src="admin-auth.js?v=2"></script>
+  <script src="admin-chrome.js"></script>
 </head>
 <body>
   <div class="top-loader" id="topLoader"></div>
@@ -18,11 +19,11 @@
   <nav class="nav glass">
     <div class="nav-container">
       <a class="nav-btn" href="index.html">Home</a>
-      <a class="nav-btn active" href="gallery.html">Gallery</a>
       <a class="nav-btn" href="upload.html">Upload</a>
+      <a class="nav-btn active" href="gallery.html">Gallery</a>
       <a class="nav-btn" href="display.html">Display</a>
       <a class="nav-btn" href="albums.html">Albums</a>
-      <a class="nav-btn" href="../portfolio.html">Portfolio</a>
+      <a class="nav-btn" href="../gallery.html">View site</a>
     </div>
   </nav>
 
@@ -31,116 +32,59 @@
       <div class="section-header">
         <h2>Gallery</h2>
         <div class="admin-actions">
-          <button id="addPhotoBtn" class="cta-button">Add Photo</button>
-          <button id="deleteSelectedBtn" class="cta-button" style="background: #e74c3c;">Delete Selected</button>
+          <button type="button" id="saveOrderBtn" class="cta-button" disabled>Save order</button>
+          <button type="button" id="deleteSelectedBtn" class="cta-button admin-btn-danger">Delete selected</button>
         </div>
       </div>
-      <div class="filter-controls">
-        <label for="gallerySortSelect">Sort by:</label>
-        <select id="gallerySortSelect">
-          <option value="nameAsc">A to Z</option>
-          <option value="nameDesc">Z to A</option>
-        </select>
-      </div>
-      <div class="gallery-grid" id="galleryGrid"></div>
+      <p class="admin-gallery-hint">Photos appear here after you upload them on the <a href="upload.html">Upload</a> tab. Drag to reorder, or use the arrows — then click <strong>Save order</strong>. The public gallery uses this order.</p>
+      <div class="gallery-grid admin-gallery-grid" id="galleryGrid"></div>
       <div class="empty-state" id="emptyState">
         <div class="empty-state-icon">📸</div>
         <div class="empty-state-text">No photos yet</div>
-        <div class="empty-state-hint">Admin can add photos through upload panel</div>
+        <div class="empty-state-hint"><a href="upload.html">Upload photos</a> first, then manage them here.</div>
       </div>
+      <p class="admin-save-status" id="saveStatus" hidden></p>
     </section>
   </main>
 
-  <div class="lightbox" id="lightbox">
-    <button class="lightbox-close" id="lightboxClose">×</button>
-    <button class="lightbox-nav lightbox-prev" id="lightboxPrev">‹</button>
-    <button class="lightbox-nav lightbox-next" id="lightboxNext">›</button>
-    <div class="lightbox-body">
-      <div class="lightbox-img-wrap" id="lightboxImgWrap">
-        <img id="lightboxImg" src="" alt="">
-      </div>
-      <div class="lightbox-info" id="lightboxInfo" style="display:none;">
-        <div class="lightbox-info-row"><span class="lightbox-info-label">Filename</span><span class="lightbox-info-val" id="lbInfoName">—</span></div>
-        <div class="lightbox-info-row"><span class="lightbox-info-label">Resolution</span><span class="lightbox-info-val" id="lbInfoRes">—</span></div>
-        <div class="lightbox-info-row"><span class="lightbox-info-label">Aspect Ratio</span><span class="lightbox-info-val" id="lbInfoAspect">—</span></div>
-        <div class="lightbox-info-row"><span class="lightbox-info-label">Format</span><span class="lightbox-info-val" id="lbInfoFormat">—</span></div>
-      </div>
-    </div>
-    <button class="lightbox-info-btn" id="lightboxInfoBtn" title="Toggle Info">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-    </button>
-    <button class="lightbox-zoom-btn" id="lightboxZoomBtn" title="Toggle Zoom">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
-    </button>
-  </div>
-
-  <!-- Add Photo Modal -->
-  <div class="modal" id="addPhotoModal">
-    <div class="modal-content">
-      <h3>Add Photo to Gallery</h3>
-      <form id="addPhotoForm">
-        <div class="form-group">
-          <label for="photoTitle">Title:</label>
-          <input type="text" id="photoTitle" required>
-        </div>
-        <div class="form-group">
-          <label for="photoCategory">Category:</label>
-          <select id="photoCategory">
-            <option value="all">All</option>
-            <option value="nature">Nature</option>
-            <option value="portrait">Portrait</option>
-            <option value="street">Street</option>
-            <option value="abstract">Abstract</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="photoDescription">Description:</label>
-          <textarea id="photoDescription" rows="3"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="photoImage">Image:</label>
-          <input type="file" id="photoImage" accept="image/*" required>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="cta-button">Add Photo</button>
-          <button type="button" class="cta-button" id="cancelAddPhoto">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <script src="../common.js"></script>
+  <script src="../common.js?v=3"></script>
   <script>
     var topLoader = document.getElementById('topLoader');
     function showLoader() { topLoader.classList.add('active'); }
     function hideLoader() { topLoader.classList.remove('active'); }
 
     var photos = [];
-    var currentSortType = 'nameAsc';
-    var currentLightboxIndex = 0;
-    var currentPhotoList = [];
-    var isZoomMode = false;
-    var zoomLevel = 1;
-    var panX = 0, panY = 0, isPanning = false, panStartX = 0, panStartY = 0;
+    var orderDirty = false;
+    var dragFromIndex = null;
 
     var galleryGrid = document.getElementById('galleryGrid');
     var emptyState = document.getElementById('emptyState');
-    var lightbox = document.getElementById('lightbox');
-    var lightboxImg = document.getElementById('lightboxImg');
-    var lightboxImgWrap = document.getElementById('lightboxImgWrap');
-    var lightboxClose = document.getElementById('lightboxClose');
-    var lightboxPrev = document.getElementById('lightboxPrev');
-    var lightboxNext = document.getElementById('lightboxNext');
-    var lightboxInfoBtn = document.getElementById('lightboxInfoBtn');
-    var lightboxInfo = document.getElementById('lightboxInfo');
-    var lightboxZoomBtn = document.getElementById('lightboxZoomBtn');
-    var gallerySortSelect = document.getElementById('gallerySortSelect');
+    var saveOrderBtn = document.getElementById('saveOrderBtn');
+    var saveStatus = document.getElementById('saveStatus');
+
+    function photoSrc(photo) {
+      if (typeof resolveMediaUrl === 'function') {
+        return resolveMediaUrl(photo.src, photo);
+      }
+      var s = photo.src || '';
+      if (s.startsWith('/')) return s;
+      return s;
+    }
+
+    function setOrderDirty(dirty) {
+      orderDirty = dirty;
+      saveOrderBtn.disabled = !dirty;
+    }
+
+    function showStatus(msg, isError) {
+      saveStatus.hidden = false;
+      saveStatus.textContent = msg;
+      saveStatus.className = 'admin-save-status' + (isError ? ' admin-save-status-error' : '');
+    }
 
     function renderGallery() {
       showLoader();
-      var filteredPhotos = sortPhotos(photos, currentSortType);
-
-      if (filteredPhotos.length === 0) {
+      if (photos.length === 0) {
         galleryGrid.style.display = 'none';
         emptyState.style.display = 'block';
         hideLoader();
@@ -149,207 +93,139 @@
       galleryGrid.style.display = 'grid';
       emptyState.style.display = 'none';
 
-      galleryGrid.innerHTML = filteredPhotos.map(function(photo, index) {
-        return `
-        <div class="gallery-item" style="animation-delay: ${Math.min(index * 0.03, 0.6)}s" data-id="${photo.id}">
-          <div class="gallery-item-checkbox">
-            <input type="checkbox" class="photo-select" data-id="${photo.id}">
-          </div>
-          <img src="${photo.src}" alt="${photo.name}" loading="lazy">
-          <div class="gallery-item-name">${photo.name}</div>
-        </div>`;
+      galleryGrid.innerHTML = photos.map(function (photo, index) {
+        var name = photo.name || 'Untitled';
+        return (
+          '<div class="gallery-item admin-gallery-item" draggable="true" data-index="' + index + '" data-id="' + photo.id + '">' +
+          '<div class="gallery-item-checkbox">' +
+          '<input type="checkbox" class="photo-select" data-id="' + photo.id + '">' +
+          '</div>' +
+          '<div class="admin-gallery-moves">' +
+          '<button type="button" class="admin-move-btn" data-dir="-1" title="Move left" aria-label="Move left">‹</button>' +
+          '<button type="button" class="admin-move-btn" data-dir="1" title="Move right" aria-label="Move right">›</button>' +
+          '</div>' +
+          '<span class="admin-drag-handle" title="Drag to reorder">⋮⋮</span>' +
+          '<img src="' + photoSrc(photo) + '" alt="' + name.replace(/"/g, '&quot;') + '" loading="lazy">' +
+          '<div class="gallery-item-name">' + name + '</div>' +
+          '</div>'
+        );
       }).join('');
 
-      galleryGrid.querySelectorAll('.gallery-item').forEach(function(item) {
-        item.addEventListener('click', function(e) {
-          if (!e.target.closest('.gallery-item-checkbox')) {
-            openLightbox(photos.find(function(p) { return String(p.id) === item.dataset.id; }));
-          }
+      galleryGrid.querySelectorAll('.admin-gallery-item').forEach(function (item) {
+        item.addEventListener('dragstart', onDragStart);
+        item.addEventListener('dragover', onDragOver);
+        item.addEventListener('drop', onDrop);
+        item.addEventListener('dragend', function () {
+          item.classList.remove('admin-drag-over');
         });
       });
+
+      galleryGrid.querySelectorAll('.admin-move-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var item = btn.closest('.admin-gallery-item');
+          var index = parseInt(item.dataset.index, 10);
+          var dir = parseInt(btn.dataset.dir, 10);
+          movePhoto(index, index + dir);
+        });
+      });
+
       hideLoader();
     }
 
-    function sortPhotos(photos, type) {
-      var sorted = photos.slice();
-      switch (type) {
-        case 'nameAsc':
-          sorted.sort(function(a, b) { return a.name.localeCompare(b.name); });
-          break;
-        case 'nameDesc':
-          sorted.sort(function(a, b) { return b.name.localeCompare(a.name); });
-          break;
-        default:
-          break;
-      }
-      return sorted;
-    }
-
-    function openLightbox(photo) {
-      if (!photo) return;
-      currentLightboxIndex = currentPhotoList.indexOf(photo);
-      lightboxImg.src = photo.src;
-      lightbox.classList.add('active');
-      updateLightboxInfo(photo);
-      document.body.style.overflow = 'hidden';
-    }
-
-    function updateLightboxInfo(photo) {
-      document.getElementById('lbInfoName').textContent = photo.name || '—';
-      document.getElementById('lbInfoRes').textContent = '—';
-      document.getElementById('lbInfoAspect').textContent = '—';
-      document.getElementById('lbInfoFormat').textContent = (photo.name && photo.name.includes('.')) ? photo.name.split('.').pop().toUpperCase() : '—';
-    }
-
-    function closeLightbox() {
-      lightbox.classList.remove('active');
-      document.body.style.overflow = '';
-      isZoomMode = false;
-      zoomLevel = 1;
-      panX = 0;
-      panY = 0;
-      applyZoomTransform();
-    }
-
-    function applyZoomTransform() {
-      var scale = isZoomMode ? zoomLevel : 1;
-      var translateX = isZoomMode ? panX : 0;
-      var translateY = isZoomMode ? panY : 0;
-      lightboxImgWrap.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
-    }
-
-    document.addEventListener('keydown', function(e) {
-      if (!lightbox.classList.contains('active')) return;
-      if (e.key === 'Escape') closeLightbox();
-      else if (e.key === 'ArrowLeft') lightboxPrev.click();
-      else if (e.key === 'ArrowRight') lightboxNext.click();
-    });
-
-    gallerySortSelect.addEventListener('change', function(e) {
-      currentSortType = e.target.value;
+    function movePhoto(from, to) {
+      if (to < 0 || to >= photos.length || from === to) return;
+      var item = photos.splice(from, 1)[0];
+      photos.splice(to, 0, item);
+      setOrderDirty(true);
       renderGallery();
-    });
+    }
 
-    // Lightbox event listeners
-    lightboxClose.addEventListener('click', closeLightbox);
-    lightboxPrev.addEventListener('click', function() {
-      currentLightboxIndex = (currentLightboxIndex - 1 + currentPhotoList.length) % currentPhotoList.length;
-      openLightbox(currentPhotoList[currentLightboxIndex]);
-    });
-    lightboxNext.addEventListener('click', function() {
-      currentLightboxIndex = (currentLightboxIndex + 1) % currentPhotoList.length;
-      openLightbox(currentPhotoList[currentLightboxIndex]);
-    });
+    function onDragStart(e) {
+      var item = e.target.closest('.admin-gallery-item');
+      if (!item) return;
+      dragFromIndex = parseInt(item.dataset.index, 10);
+      e.dataTransfer.effectAllowed = 'move';
+      item.classList.add('admin-dragging');
+    }
 
-    // Admin functionality
-    document.getElementById('addPhotoBtn').addEventListener('click', () => {
-      document.getElementById('addPhotoModal').style.display = 'block';
-    });
-
-    document.getElementById('cancelAddPhoto').addEventListener('click', () => {
-      document.getElementById('addPhotoModal').style.display = 'none';
-    });
-
-    document.getElementById('addPhotoForm').addEventListener('submit', (e) => {
+    function onDragOver(e) {
       e.preventDefault();
-      addPhotoToGallery();
-    });
+      var item = e.target.closest('.admin-gallery-item');
+      if (item) item.classList.add('admin-drag-over');
+    }
 
-    document.getElementById('deleteSelectedBtn').addEventListener('click', () => {
-      const selected = document.querySelectorAll('.photo-select:checked');
+    function onDrop(e) {
+      e.preventDefault();
+      var item = e.target.closest('.admin-gallery-item');
+      if (!item || dragFromIndex === null) return;
+      var toIndex = parseInt(item.dataset.index, 10);
+      galleryGrid.querySelectorAll('.admin-gallery-item').forEach(function (el) {
+        el.classList.remove('admin-drag-over', 'admin-dragging');
+      });
+      movePhoto(dragFromIndex, toIndex);
+      dragFromIndex = null;
+    }
+
+    document.getElementById('deleteSelectedBtn').addEventListener('click', function () {
+      var selected = document.querySelectorAll('.photo-select:checked');
       if (selected.length === 0) {
-        alert('Please select photos to delete');
+        alert('Select one or more photos to delete.');
         return;
       }
-      
-      if (confirm(`Delete ${selected.length} photo(s)?`)) {
-        const idsToDelete = Array.from(selected).map(cb => cb.dataset.id);
-        photos = photos.filter(p => !idsToDelete.includes(p.id));
-        
-        AdminAPI.saveGallery(photos)
-          .then(function () { renderGallery(); })
-          .catch(function (error) {
-            alert('Failed to delete photos: ' + error.message);
-          });
-      }
+      if (!confirm('Delete ' + selected.length + ' photo(s) from the live gallery?')) return;
+
+      var idsToDelete = Array.from(selected).map(function (cb) {
+        return String(cb.dataset.id);
+      });
+      photos = photos.filter(function (p) {
+        return idsToDelete.indexOf(String(p.id)) === -1;
+      });
+
+      showLoader();
+      AdminAPI.saveGallery(photos)
+        .then(function () {
+          setOrderDirty(false);
+          showStatus('Deleted. Public gallery updates in about a minute.');
+          renderGallery();
+        })
+        .catch(function (error) {
+          alert('Failed to delete: ' + error.message);
+        })
+        .finally(hideLoader);
     });
 
-    function addPhotoToGallery() {
-      const title = document.getElementById('photoTitle').value;
-      const category = document.getElementById('photoCategory').value;
-      const description = document.getElementById('photoDescription').value;
-      const fileInput = document.getElementById('photoImage');
-      
-      console.log('Add photo form data:', { title, category, description, file: fileInput.files[0] });
-      
-      if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        
-        // Read file as base64 and send as JSON
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const base64Data = e.target.result;
-          
-          const fileData = {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-            name: file.name,
-            dataUrl: base64Data,
-            size: file.size,
-            type: file.type
-          };
-          
-          console.log('File converted to base64:', fileData);
-          
-          try {
-            const uploaded = await AdminAPI.uploadFiles([{
-              id: fileData.id,
-              name: file.name,
-              dataUrl: base64Data,
-              size: file.size
-            }]);
-            const newPhoto = {
-              id: uploaded[0].id,
-              name: title || file.name,
-              src: uploaded[0].src,
-              category: category,
-              description: description,
-              date: uploaded[0].uploadedAt || new Date().toISOString()
-            };
-            photos.push(newPhoto);
-            await AdminAPI.saveGallery(photos);
-            document.getElementById('addPhotoForm').reset();
-            document.getElementById('addPhotoModal').style.display = 'none';
-            renderGallery();
-          } catch (error) {
-            console.error('Upload error:', error);
-            alert('Failed to upload photo: ' + error.message);
-          }
-        };
-        
-        reader.onerror = (error) => {
-          console.error('FileReader error:', error);
-          alert('Failed to read file: ' + error.message);
-        };
-        
-        reader.readAsDataURL(file);
-      }
-    }
+    saveOrderBtn.addEventListener('click', function () {
+      showLoader();
+      saveOrderBtn.disabled = true;
+      AdminAPI.saveGallery(photos)
+        .then(function () {
+          setOrderDirty(false);
+          showStatus('Order saved. Visitors will see this order on the main gallery.');
+        })
+        .catch(function (error) {
+          alert('Failed to save order: ' + error.message);
+          setOrderDirty(true);
+        })
+        .finally(hideLoader);
+    });
 
     function loadGalleryFromServer() {
+      showLoader();
       AdminAPI.loadGallery()
         .then(function (loaded) {
           photos = loaded;
-          currentPhotoList = photos;
-          setActiveNav();
+          setOrderDirty(false);
+          if (typeof setActiveNav === 'function') setActiveNav();
           renderGallery();
         })
         .catch(function (error) {
           console.error('Error loading gallery:', error);
           photos = [];
-          currentPhotoList = photos;
-          setActiveNav();
           renderGallery();
-        });
+          showStatus('Could not load gallery: ' + error.message, true);
+        })
+        .finally(hideLoader);
     }
 
     window.addEventListener('admin-auth-ready', loadGalleryFromServer);

@@ -164,18 +164,47 @@
   let gallerySha = null;
   let albumsSha = null;
 
+  async function loadGalleryFromPublicJson() {
+    const urls = [
+      '/photos/gallery.json',
+      'https://raw.githubusercontent.com/idkkkkk123/PhotoPortfolio/main/photos/gallery.json'
+    ];
+    for (let i = 0; i < urls.length; i++) {
+      try {
+        const res = await fetch(urls[i] + '?_=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) continue;
+        const data = await res.json();
+        const list = parseGalleryData(data).map(toAdminPhoto);
+        if (list.length) return list;
+      } catch (e) {
+        console.warn('Public gallery load failed:', urls[i], e);
+      }
+    }
+    return [];
+  }
+
   async function loadGallery() {
+    let photos = [];
     try {
       const result = await gitGetJson(GALLERY_PATH);
       gallerySha = result.sha;
-      return parseGalleryData(result.data).map(toAdminPhoto);
+      photos = parseGalleryData(result.data).map(toAdminPhoto);
     } catch (gitErr) {
-      console.warn('Git Gateway load failed, trying server:', gitErr.message);
-      const response = await fetch('/.netlify/functions/load-photos', { cache: 'no-store' });
-      const data = await response.json();
-      if (!data.success) throw gitErr;
-      return (data.photos || []).map(toAdminPhoto);
+      console.warn('Git Gateway load failed:', gitErr.message);
     }
+    if (!photos.length) {
+      photos = await loadGalleryFromPublicJson();
+    }
+    if (!photos.length) {
+      try {
+        const response = await fetch('/.netlify/functions/load-photos', { cache: 'no-store' });
+        const data = await response.json();
+        if (data.success) photos = (data.photos || []).map(toAdminPhoto);
+      } catch (e) {
+        console.warn('Server load failed:', e);
+      }
+    }
+    return photos;
   }
 
   async function saveGallery(photos) {
