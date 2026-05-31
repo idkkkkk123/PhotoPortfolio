@@ -129,9 +129,18 @@
       return '—';
     }
 
-    async function renderGallery() {
-      showLoader();
+    let lastGallerySig = '';
+
+    async function renderGallery(options = {}) {
+      const silent = !!options.silent;
+      if (!silent) showLoader();
       const loaded = await loadStaticGalleryPhotos();
+      const sig = JSON.stringify(loaded || []);
+      if (silent && sig === lastGallerySig) {
+        if (!silent) hideLoader();
+        return;
+      }
+      lastGallerySig = sig;
       photos = loaded || [];
       const filteredPhotos = sortPhotos(photos, currentSortType);
 
@@ -305,6 +314,7 @@
 
     setActiveNav();
     renderGallery();
+    startLiveContentSync(renderGallery);
   </script>
 </body>
 </html>

@@ -110,38 +110,128 @@ const STORAGE_KEYS = {
     localStorage.setItem(STORAGE_KEYS.photos, JSON.stringify(photos));
   }
 
-async function loadJson(path) {
-  try {
-    const res = await fetch(path, { cache: 'no-cache' });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
+// After CMS Publish, GitHub updates in seconds; Netlify deploy can take 1–2 min.
+// When enabled, public pages read from GitHub first so new uploads show ASAP.
+const SITE_CONTENT = {
+  github: {
+    owner: 'idkkkkk123',
+    repo: 'PhotoPortfolio',
+    branch: 'main',
+    enabled: true
+  },
+  liveRefreshMs: 15000
+};
+
+function githubRawUrl(relativePath) {
+  const path = String(relativePath).replace(/^\//, '');
+  const { owner, repo, branch } = SITE_CONTENT.github;
+  return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+}
+
+function resolveMediaUrl(src) {
+  if (!src) return src;
+  const s = String(src);
+  if (/^https?:\/\//i.test(s)) return s;
+  if (SITE_CONTENT.github.enabled && s.startsWith('/photos/')) {
+    return githubRawUrl(s);
   }
+  return s;
+}
+
+function normalizePhotoEntry(entry) {
+  if (!entry) return entry;
+  if (typeof entry === 'string') return resolveMediaUrl(entry);
+  if (typeof entry === 'object' && entry.src) {
+    return { ...entry, src: resolveMediaUrl(entry.src) };
+  }
+  return entry;
+}
+
+function normalizeAlbum(album) {
+  if (!album || typeof album !== 'object') return album;
+  const copy = { ...album };
+  if (Array.isArray(copy.photos)) {
+    copy.photos = copy.photos.map(normalizePhotoEntry);
+  }
+  return copy;
+}
+
+async function fetchJson(url) {
+  const sep = url.includes('?') ? '&' : '?';
+  const res = await fetch(`${url}${sep}_=${Date.now()}`, { cache: 'no-store' });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function loadJson(relativePath) {
+  const path = String(relativePath).replace(/^\//, '');
+  const sources = [];
+  if (SITE_CONTENT.github.enabled) {
+    sources.push(githubRawUrl(path));
+  }
+  sources.push(path);
+
+  for (const url of sources) {
+    try {
+      const data = await fetchJson(url);
+      if (data != null) return data;
+    } catch {
+      /* try next source */
+    }
+  }
+  return null;
 }
 
 async function loadStaticGalleryPhotos() {
   const data = await loadJson('photos/gallery.json');
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.photos)) return data.photos;
-  return [];
+  let photos = [];
+  if (Array.isArray(data)) photos = data;
+  else if (data && Array.isArray(data.photos)) photos = data.photos;
+  return photos.map(normalizePhotoEntry);
 }
 
 async function loadStaticAlbums() {
   const data = await loadJson('photos/albums.json');
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.albums)) return data.albums;
-  return [];
+  let albums = [];
+  if (Array.isArray(data)) albums = data;
+  else if (data && Array.isArray(data.albums)) albums = data.albums;
+  return albums.map(normalizeAlbum);
 }
 
 async function loadStaticPortfolioItems() {
   const data = await loadJson('photos/portfolio.json');
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.items)) return data.items;
-  return [];
+  let items = [];
+  if (Array.isArray(data)) items = data;
+  else if (data && Array.isArray(data.items)) items = data.items;
+  return items.map(normalizePhotoEntry);
+}
+
+let _liveContentTimer = null;
+
+function startLiveContentSync(refreshFn, intervalMs) {
+  const ms = intervalMs ?? SITE_CONTENT.liveRefreshMs ?? 15000;
+
+  const run = (opts) => refreshFn(opts || {});
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') run({ silent: true });
+  });
+
+  window.addEventListener('focus', () => run({ silent: true }));
+
+  if (_liveContentTimer) clearInterval(_liveContentTimer);
+  _liveContentTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') run({ silent: true });
+  }, ms);
+
+  return {
+    stop() {
+      if (_liveContentTimer) {
+        clearInterval(_liveContentTimer);
+        _liveContentTimer = null;
+      }
+    }
+  };
 }
   
   function loadAlbums() {

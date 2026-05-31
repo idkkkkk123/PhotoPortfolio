@@ -21,6 +21,18 @@ Visitors never log in. Only invited users can open the admin URL.
 **Admin URL (use this one):**  
 https://photoportfolioweb.netlify.app/admin-bbpews098ge8ht4ez4xdeg/
 
+## Fast updates (photos show in ~seconds, not after full deploy)
+
+Public pages (`gallery.html`, `albums.html`, `portfolio.html`) load data from **GitHub first**, then fall back to the Netlify site. When you click **Publish** in CMS:
+
+1. GitHub gets the new JSON and images in a few seconds.
+2. The gallery page picks that up (auto-refresh every 15 seconds, or when you switch back to the tab).
+3. Netlify still redeploys in the background for normal hosting.
+
+**Requirement:** the GitHub repo must be **public** (so `raw.githubusercontent.com` can serve files). If the repo is private, set `SITE_CONTENT.github.enabled` to `false` in `common.js` — then updates only appear after each Netlify deploy.
+
+**Quick test:** publish a photo in admin, open `gallery.html` in another tab, wait up to 15 seconds (or click away and back to the tab).
+
 ---
 
 ## One-time Netlify setup (do in order)

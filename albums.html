@@ -143,9 +143,19 @@
       });
     }
 
-    async function renderAlbumGrid() {
-      showLoader();
-      albums = await loadStaticAlbums();
+    let lastAlbumsSig = '';
+
+    async function renderAlbumGrid(options = {}) {
+      const silent = !!options.silent;
+      if (!silent) showLoader();
+      const loaded = await loadStaticAlbums();
+      const sig = JSON.stringify(loaded || []);
+      if (silent && sig === lastAlbumsSig) {
+        if (!silent) hideLoader();
+        return;
+      }
+      lastAlbumsSig = sig;
+      albums = loaded;
 
       if (!albums || albums.length === 0) {
         albumGrid.style.display = 'none';
@@ -265,6 +275,7 @@
 
     setActiveNav();
     renderAlbumGrid();
+    startLiveContentSync(renderAlbumGrid);
   </script>
 </body>
 </html>

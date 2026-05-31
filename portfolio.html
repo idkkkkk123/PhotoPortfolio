@@ -87,9 +87,19 @@
       return m && m[1] ? m[1].toLowerCase() : null;
     }
 
-    async function renderPortfolio() {
-      showLoader();
-      portfolioItems = await loadStaticPortfolioItems();
+    let lastPortfolioSig = '';
+
+    async function renderPortfolio(options = {}) {
+      const silent = !!options.silent;
+      if (!silent) showLoader();
+      const loaded = await loadStaticPortfolioItems();
+      const sig = JSON.stringify(loaded || []);
+      if (silent && sig === lastPortfolioSig) {
+        if (!silent) hideLoader();
+        return;
+      }
+      lastPortfolioSig = sig;
+      portfolioItems = loaded;
 
       if (!portfolioItems || portfolioItems.length === 0) {
         portfolioGrid.style.display = 'none';
@@ -159,6 +169,7 @@
 
     setActiveNav();
     renderPortfolio();
+    startLiveContentSync(renderPortfolio);
   </script>
 </body>
 </html>
