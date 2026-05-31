@@ -249,12 +249,33 @@
       if (!photo) return;
       var src = photoSrc(photo);
       lightboxImg.src = src;
-      lightboxDownloadBtn.href = src;
-      var fmt = detectFormat(photo);
+        var fmt = detectFormat(photo);
       lightboxDownloadBtn.setAttribute(
         'download',
         safeFilename(photo) + (fmt !== '—' ? '.' + fmt.toLowerCase() : '')
       );
+      lightboxDownloadBtn.onclick = function(e) {
+        e.preventDefault();
+        fetch(src)
+          .then(function(response) {
+            if (!response.ok) throw new Error('Failed to fetch image');
+            return response.blob();
+          })
+          .then(function(blob) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = safeFilename(photo) + (fmt !== '—' ? '.' + fmt.toLowerCase() : '');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          })
+          .catch(function(err) {
+            console.error('Download failed:', err);
+            alert('Failed to download image. Please try again.');
+          });
+      };
       document.getElementById('lbInfoName').textContent = photo.name || 'Untitled';
       document.getElementById('lbInfoDate').textContent =
         photo.date ? new Date(photo.date).toLocaleDateString() : '—';
@@ -324,6 +345,37 @@
     lightboxZoomBtn.addEventListener('click', function () {
       if (isZoomMode) exitZoom();
       else enterZoom();
+    });
+
+    // Prevent button jumping by adding specific active states
+    lightboxClose.addEventListener('mousedown', function() {
+      this.style.transform = 'scale(0.95)';
+    });
+    lightboxClose.addEventListener('mouseup', function() {
+      this.style.transform = '';
+    });
+    lightboxClose.addEventListener('mouseleave', function() {
+      this.style.transform = '';
+    });
+
+    lightboxPrev.addEventListener('mousedown', function() {
+      this.style.transform = 'translateY(-50%) scale(0.95)';
+    });
+    lightboxPrev.addEventListener('mouseup', function() {
+      this.style.transform = '';
+    });
+    lightboxPrev.addEventListener('mouseleave', function() {
+      this.style.transform = '';
+    });
+
+    lightboxNext.addEventListener('mousedown', function() {
+      this.style.transform = 'translateY(-50%) scale(0.95)';
+    });
+    lightboxNext.addEventListener('mouseup', function() {
+      this.style.transform = '';
+    });
+    lightboxNext.addEventListener('mouseleave', function() {
+      this.style.transform = '';
     });
     lightboxImgWrap.addEventListener('mousedown', function (e) {
       if (!isZoomMode) return;
