@@ -68,6 +68,7 @@
     .admin-gate[hidden] { display: none !important; }
   </style>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="/identity-invite.js"></script>
 </head>
 <body>
   <div id="admin-gate" class="admin-gate">
@@ -137,13 +138,25 @@
           return;
         }
 
+        const inviteHint = document.createElement('p');
+        inviteHint.className = 'admin-gate-loading';
+        inviteHint.hidden = true;
+        inviteHint.textContent = 'Invite link detected — set your new password in the popup (you choose it; none is emailed).';
+        document.querySelector('.admin-gate-card').appendChild(inviteHint);
+
         identity.on('init', function (user) {
           identityReady = true;
           if (user) {
             startCms();
-          } else {
-            showLoginButton();
+            return;
           }
+          if (window.identityHashType && window.identityHashType() === 'invite') {
+            inviteHint.hidden = false;
+            loadingEl.hidden = true;
+            identity.open('signup');
+            return;
+          }
+          showLoginButton();
         });
 
         identity.on('login', function () {
@@ -155,7 +168,11 @@
         });
 
         loginBtn.addEventListener('click', function () {
-          identity.open('login');
+          if (window.openNetlifyIdentityModal) {
+            window.openNetlifyIdentityModal();
+          } else {
+            identity.open('login');
+          }
         });
 
         identity.init();

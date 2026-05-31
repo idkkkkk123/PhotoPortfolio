@@ -86,8 +86,13 @@ You do **not** create passwords in the code. You invite people by email in Netli
 
 1. **Identity** → **Invite users** (or **Add users**).
 2. Enter **your** email address → send invite.
-3. Open that email from Netlify → click the link → **set a password**.
-4. Go to the admin URL → **Log in** → use that email + password.
+3. Open that email → click **Accept the invite**.
+4. You land on the site with `#invite_token=...` in the URL. A popup opens to **choose your password** (Netlify does **not** email a password — you create it here).
+5. After that, go to the admin URL and use **that email + the password you just chose**.
+
+**If invite opens a “Log in” screen instead of “Sign up”:** hard-refresh the homepage, or open  
+`https://photoportfolioweb.netlify.app/#invite_token=...`  
+(copy the full link from your email). The site should open **Sign up** / set password, not ask for an existing password.
 
 **For your friend (photographer):**
 
