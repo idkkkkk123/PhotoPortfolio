@@ -911,44 +911,104 @@ button:active,
 }
 
 /* Lightbox */
+@keyframes lightboxBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes lightboxStageIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes lightboxToolbarIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes lightboxInfoIn {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .lightbox {
   display: none;
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(10, 10, 10, 0.92);
-  backdrop-filter: blur(30px);
+  inset: 0;
   z-index: 2000;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  padding: 2rem;
-  animation: fadeIn 0.2s ease-out;
+  padding: 0;
+  pointer-events: none;
 }
 
 .lightbox.active {
   display: flex;
+  pointer-events: auto;
+}
+
+.lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 6, 10, 0.72);
+  backdrop-filter: blur(24px) saturate(1.15);
+  -webkit-backdrop-filter: blur(24px) saturate(1.15);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.lightbox.active .lightbox-backdrop {
+  opacity: 1;
+  animation: lightboxBackdropIn 0.45s ease forwards;
+}
+
+.lightbox-stage {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 4.5rem 5.5rem 7.5rem;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: scale(0.96) translateY(10px);
+  transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lightbox.active .lightbox-stage {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  animation: lightboxStageIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .lightbox-body {
   display: flex;
-  align-items: center;
-  gap: 2rem;
-  max-width: 92vw;
-  max-height: 88vh;
-  animation: scaleIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  align-items: stretch;
+  gap: 1.5rem;
+  max-width: min(1200px, 94vw);
+  max-height: 100%;
+  width: 100%;
 }
 
 .lightbox-img-wrap {
@@ -957,48 +1017,57 @@ button:active,
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: 12px;
-  max-height: 85vh;
-  position: relative;
+  min-width: 0;
+  max-height: calc(100vh - 10rem);
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
 }
 
 .lightbox-img-wrap img {
   max-width: 100%;
-  max-height: 85vh;
+  max-height: calc(100vh - 11.5rem);
   object-fit: contain;
-  border-radius: 12px;
-  box-shadow: 0 16px 64px rgba(0, 0, 0, 0.18);
-  transition: transform 0.1s ease;
+  border-radius: 8px;
+  transition: transform 0.12s ease-out;
   will-change: transform;
 }
 
 .lightbox-img-wrap.zoom-active {
-  cursor: zoom-in;
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") 12 12, zoom-in;
+  cursor: grab;
 }
 
 .lightbox-img-wrap.zoom-active:active {
   cursor: grabbing;
 }
 
-/* Lightbox Info Panel */
 .lightbox-info {
-  width: 220px;
+  display: none;
+  width: min(260px, 32vw);
   flex-shrink: 0;
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(16px);
-  border-radius: 14px;
-  padding: 1.25rem;
-  border: 1px solid rgba(255,255,255,0.1);
-  animation: fadeIn 0.3s ease 0.15s both;
+  align-self: center;
+  background: rgba(18, 18, 22, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.lightbox-info.is-visible {
+  display: block;
+  animation: lightboxInfoIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .lightbox-info-row {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  gap: 0.2rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .lightbox-info-row:last-child {
@@ -1006,105 +1075,97 @@ button:active,
 }
 
 .lightbox-info-label {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .lightbox-info-val {
-  font-size: 0.82rem;
-  color: rgba(255,255,255,0.9);
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.92);
   font-weight: 400;
-  word-break: break-all;
+  word-break: break-word;
+  line-height: 1.35;
 }
 
-/* Info toggle button */
-.lightbox-info-btn {
+/* Bottom toolbar — no overlapping buttons */
+.lightbox-toolbar {
   position: fixed;
-  bottom: 2rem;
-  right: 10rem;
-  background: rgba(255,255,255,0.15);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.2);
-  color: white;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  cursor: pointer;
+  bottom: 1.75rem;
+  left: 50%;
+  z-index: 2002;
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  z-index: 2001;
+  gap: 0.35rem;
+  padding: 0.4rem;
+  background: rgba(22, 22, 26, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transform: translateX(-50%) translateY(14px);
+  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: auto;
 }
 
-.lightbox-download-btn {
-  position: fixed;
-  bottom: 2rem;
-  right: 5.5rem;
-  background: rgba(255,255,255,0.15);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.2);
-  color: white;
-  height: 44px;
-  border-radius: 12px;
-  cursor: pointer;
+.lightbox.active .lightbox-toolbar {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  animation: lightboxToolbarIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+.lightbox-tool {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  z-index: 2001;
-  text-decoration: none;
-  padding: 0 0.95rem;
-  font-size: 0.78rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.lightbox-download-btn:hover {
-  background: rgba(255,255,255,0.25);
-}
-
-.lightbox-info-btn:hover {
-  background: rgba(255,255,255,0.25);
-}
-
-.lightbox-info-btn.active {
-  background: white;
-  color: #18181b;
-  border-color: white;
-}
-
-/* Zoom toggle button */
-.lightbox-zoom-btn {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  background: rgba(255,255,255,0.15);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.2);
-  color: white;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  gap: 0.45rem;
+  min-height: 42px;
+  padding: 0 1rem;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  z-index: 2001;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.22s ease, color 0.22s ease, transform 0.2s ease, box-shadow 0.22s ease;
 }
 
-.lightbox-zoom-btn:hover {
-  background: rgba(255,255,255,0.25);
+.lightbox-tool svg {
+  flex-shrink: 0;
+  opacity: 0.9;
 }
 
-.lightbox-zoom-btn.active {
-  background: white;
+.lightbox-tool:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.lightbox-tool.active {
+  background: #fff;
   color: #18181b;
-  border-color: white;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+}
+
+.lightbox-tool--accent:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Legacy class hooks (toolbar buttons) */
+.lightbox-info-btn,
+.lightbox-download-btn,
+.lightbox-zoom-btn {
+  position: static;
+  width: auto;
+  height: auto;
 }
 
 /* Legacy .lightbox-content compat */
@@ -1112,7 +1173,6 @@ button:active,
   max-width: 90vw;
   max-height: 90vh;
   position: relative;
-  animation: scaleIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .lightbox-content img {
@@ -1120,62 +1180,80 @@ button:active,
   max-height: 90vh;
   object-fit: contain;
   border-radius: 12px;
-  box-shadow: 0 16px 64px rgba(0, 0, 0, 0.18);
 }
 
 .lightbox-close {
   position: fixed;
-  top: 1.5rem;
-  right: 1.5rem;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.2);
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 2003;
+  background: rgba(22, 22, 26, 0.65);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   color: white;
-  border-radius: 12px;
-  width: 44px;
-  height: 44px;
+  border-radius: 50%;
+  width: 46px;
+  height: 46px;
   cursor: pointer;
-  font-size: 1.25rem;
+  font-size: 1.35rem;
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
-  z-index: 2001;
+  transition: background 0.22s ease, transform 0.22s ease, opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: auto;
+}
+
+.lightbox.active .lightbox-close {
+  opacity: 1;
+  animation: lightboxToolbarIn 0.45s ease 0.05s both;
 }
 
 .lightbox-close:hover {
-  background: rgba(255,255,255,0.25);
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.06);
 }
 
 .lightbox-nav {
   position: fixed;
   top: 50%;
+  z-index: 2003;
   transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(22, 22, 26, 0.65);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   color: white;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   cursor: pointer;
-  font-size: 1.25rem;
-  transition: all 0.15s ease;
-  z-index: 2001;
+  font-size: 1.35rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.22s ease, transform 0.22s ease, opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: auto;
+}
+
+.lightbox.active .lightbox-nav {
+  opacity: 1;
+  animation: lightboxToolbarIn 0.45s ease 0.1s both;
 }
 
 .lightbox-nav:hover {
-  transform: translateY(-50%) scale(1.05);
-  background: rgba(255,255,255,0.22);
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-50%) scale(1.06);
 }
 
 .lightbox-prev {
-  left: 2rem;
+  left: 1.25rem;
 }
 
 .lightbox-next {
-  right: 2rem;
+  right: 1.25rem;
 }
 
 /* Empty State */
@@ -3576,62 +3654,74 @@ button.cta-button:hover {
   }
 
   /* --- Lightbox --- */
-  .lightbox {
-    padding: 0.5rem;
+  .lightbox-stage {
+    padding: 3.5rem 0.75rem 6.5rem;
   }
 
   .lightbox-body {
     flex-direction: column;
-    gap: 0.75rem;
-    max-width: 100vw;
+    gap: 0.85rem;
+    max-width: 100%;
   }
 
   .lightbox-info {
     width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.85rem;
+  }
+
+  .lightbox-info.is-visible {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0 0.75rem;
   }
 
   .lightbox-info-row {
-    flex: 1;
-    min-width: 90px;
+    min-width: 0;
   }
 
   .lightbox-nav {
-    width: 40px;
-    height: 40px;
-    font-size: 1.1rem;
+    width: 42px;
+    height: 42px;
+    font-size: 1.15rem;
   }
 
   .lightbox-prev { left: 0.5rem; }
   .lightbox-next { right: 0.5rem; }
 
   .lightbox-close {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     top: 0.75rem;
     right: 0.75rem;
-    font-size: 1.1rem;
   }
 
-  .lightbox-info-btn,
-  .lightbox-download-btn,
-  .lightbox-zoom-btn {
-    width: 40px;
-    height: 40px;
+  .lightbox-toolbar {
     bottom: 1rem;
+    left: 50%;
+    right: auto;
+    max-width: calc(100vw - 1.5rem);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
 
-  .lightbox-info-btn { right: 7rem; }
-  .lightbox-download-btn {
-    right: 4rem;
-    width: auto;
-    padding: 0 0.7rem;
-    font-size: 0.68rem;
+  .lightbox-toolbar::-webkit-scrollbar {
+    display: none;
   }
-  .lightbox-zoom-btn { right: 1rem; }
+
+  .lightbox-tool {
+    min-height: 38px;
+    padding: 0 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .lightbox-tool span {
+    display: none;
+  }
+
+  .lightbox-tool svg {
+    width: 18px;
+    height: 18px;
+  }
 
   /* --- Albums --- */
   .album-grid {

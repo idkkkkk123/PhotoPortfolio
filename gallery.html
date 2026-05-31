@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gallery</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 </head>
 <body>
@@ -46,42 +46,41 @@
     </section>
   </main>
 
-  <div class="lightbox" id="lightbox">
-    <button class="lightbox-close" id="lightboxClose">×</button>
-    <button class="lightbox-nav lightbox-prev" id="lightboxPrev">‹</button>
-    <button class="lightbox-nav lightbox-next" id="lightboxNext">›</button>
+  <div class="lightbox" id="lightbox" aria-hidden="true">
+    <div class="lightbox-backdrop" id="lightboxBackdrop"></div>
+    <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close">×</button>
+    <button type="button" class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="Previous">‹</button>
+    <button type="button" class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="Next">›</button>
 
-    <div class="lightbox-body">
-      <div class="lightbox-img-wrap" id="lightboxImgWrap">
-        <img id="lightboxImg" src="" alt="">
-      </div>
-
-      <div class="lightbox-info" id="lightboxInfo" style="display:none;">
-        <div class="lightbox-info-row"><span class="lightbox-info-label">Filename</span><span class="lightbox-info-val" id="lbInfoName">—</span></div>
-        <div class="lightbox-info-row"><span class="lightbox-info-label">Resolution</span><span class="lightbox-info-val" id="lbInfoRes">—</span></div>
-        <div class="lightbox-info-row"><span class="lightbox-info-label">Aspect Ratio</span><span class="lightbox-info-val" id="lbInfoAspect">—</span></div>
-        <div class="lightbox-info-row"><span class="lightbox-info-label">Date</span><span class="lightbox-info-val" id="lbInfoDate">—</span></div>
-        <div class="lightbox-info-row"><span class="lightbox-info-label">Format</span><span class="lightbox-info-val" id="lbInfoFormat">—</span></div>
+    <div class="lightbox-stage">
+      <div class="lightbox-body">
+        <div class="lightbox-img-wrap" id="lightboxImgWrap">
+          <img id="lightboxImg" src="" alt="">
+        </div>
+        <aside class="lightbox-info" id="lightboxInfo" aria-label="Photo details">
+          <div class="lightbox-info-row"><span class="lightbox-info-label">Filename</span><span class="lightbox-info-val" id="lbInfoName">—</span></div>
+          <div class="lightbox-info-row"><span class="lightbox-info-label">Resolution</span><span class="lightbox-info-val" id="lbInfoRes">—</span></div>
+          <div class="lightbox-info-row"><span class="lightbox-info-label">Aspect Ratio</span><span class="lightbox-info-val" id="lbInfoAspect">—</span></div>
+          <div class="lightbox-info-row"><span class="lightbox-info-label">Date</span><span class="lightbox-info-val" id="lbInfoDate">—</span></div>
+          <div class="lightbox-info-row"><span class="lightbox-info-label">Format</span><span class="lightbox-info-val" id="lbInfoFormat">—</span></div>
+        </aside>
       </div>
     </div>
 
-    <button class="lightbox-info-btn" id="lightboxInfoBtn" title="Toggle Info">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M12 16v-4"/>
-        <path d="M12 8h.01"/>
-      </svg>
-    </button>
-
-    <a class="lightbox-download-btn" id="lightboxDownloadBtn" href="#" download>Download</a>
-
-    <button class="lightbox-zoom-btn" id="lightboxZoomBtn" title="Toggle Zoom">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/>
-        <path d="m21 21-4.3-4.3"/>
-        <path d="M11 8v6M8 11h6"/>
-      </svg>
-    </button>
+    <div class="lightbox-toolbar" role="toolbar" aria-label="Photo actions">
+      <button type="button" class="lightbox-tool lightbox-info-btn" id="lightboxInfoBtn" title="Photo info">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <span>Info</span>
+      </button>
+      <a class="lightbox-tool lightbox-tool--accent lightbox-download-btn" id="lightboxDownloadBtn" href="#" download>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        <span>Download</span>
+      </a>
+      <button type="button" class="lightbox-tool lightbox-zoom-btn" id="lightboxZoomBtn" title="Zoom">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
+        <span>Zoom</span>
+      </button>
+    </div>
   </div>
 
   <script src="common.js?v=3"></script>
@@ -176,11 +175,18 @@
       hideLoader();
     }
 
+    function setInfoPanelOpen(open) {
+      lightboxInfo.classList.toggle('is-visible', open);
+      lightboxInfoBtn.classList.toggle('active', open);
+    }
+
     function openLightbox(index, photoList) {
       currentLightboxIndex = index;
       currentPhotoList = photoList;
       updateLightboxContent();
+      setInfoPanelOpen(false);
       lightbox.classList.add('active');
+      lightbox.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
       exitZoom();
     }
@@ -218,7 +224,9 @@
 
     function closeLightbox() {
       lightbox.classList.remove('active');
+      lightbox.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
+      setInfoPanelOpen(false);
       exitZoom();
     }
 
@@ -234,12 +242,10 @@
       updateLightboxContent();
       exitZoom();
     });
-    lightbox.addEventListener('click', function(e) { if (e.target === lightbox) closeLightbox(); });
+    document.getElementById('lightboxBackdrop').addEventListener('click', closeLightbox);
 
     lightboxInfoBtn.addEventListener('click', function() {
-      var showing = lightboxInfo.style.display !== 'none';
-      lightboxInfo.style.display = showing ? 'none' : '';
-      lightboxInfoBtn.classList.toggle('active', !showing);
+      setInfoPanelOpen(!lightboxInfo.classList.contains('is-visible'));
     });
 
     lightboxZoomBtn.addEventListener('click', function() {
