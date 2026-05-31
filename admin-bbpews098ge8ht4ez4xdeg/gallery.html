@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gallery — Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../style.css?v=4">
+  <link rel="stylesheet" href="../style.css?v=5">
   <link rel="stylesheet" href="admin-styles.css">
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script src="/identity-invite.js"></script>
@@ -345,37 +345,6 @@
     lightboxZoomBtn.addEventListener('click', function () {
       if (isZoomMode) exitZoom();
       else enterZoom();
-    });
-
-    // Prevent button jumping by adding specific active states
-    lightboxClose.addEventListener('mousedown', function() {
-      this.style.transform = 'scale(0.95)';
-    });
-    lightboxClose.addEventListener('mouseup', function() {
-      this.style.transform = '';
-    });
-    lightboxClose.addEventListener('mouseleave', function() {
-      this.style.transform = '';
-    });
-
-    lightboxPrev.addEventListener('mousedown', function() {
-      this.style.transform = 'translateY(-50%) scale(0.95)';
-    });
-    lightboxPrev.addEventListener('mouseup', function() {
-      this.style.transform = '';
-    });
-    lightboxPrev.addEventListener('mouseleave', function() {
-      this.style.transform = '';
-    });
-
-    lightboxNext.addEventListener('mousedown', function() {
-      this.style.transform = 'translateY(-50%) scale(0.95)';
-    });
-    lightboxNext.addEventListener('mouseup', function() {
-      this.style.transform = '';
-    });
-    lightboxNext.addEventListener('mouseleave', function() {
-      this.style.transform = '';
     });
     lightboxImgWrap.addEventListener('mousedown', function (e) {
       if (!isZoomMode) return;

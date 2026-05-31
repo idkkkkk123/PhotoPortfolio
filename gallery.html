@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gallery</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 </head>
 <body>
@@ -197,9 +197,30 @@
 
       lightboxImg.src = photo.src;
 
-      lightboxDownloadBtn.href = photo.src;
       const fmt = detectFormat(photo);
       lightboxDownloadBtn.setAttribute('download', `${safeFilename(photo)}${fmt !== '—' ? '.' + fmt.toLowerCase() : ''}`);
+      lightboxDownloadBtn.onclick = function(e) {
+        e.preventDefault();
+        fetch(photo.src)
+          .then(function(response) {
+            if (!response.ok) throw new Error('Failed to fetch image');
+            return response.blob();
+          })
+          .then(function(blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${safeFilename(photo)}${fmt !== '—' ? '.' + fmt.toLowerCase() : ''}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          })
+          .catch(function(err) {
+            console.error('Download failed:', err);
+            alert('Failed to download image. Please try again.');
+          });
+      };
 
       // Info panel
       document.getElementById('lbInfoName').textContent = photo.name || 'Untitled';

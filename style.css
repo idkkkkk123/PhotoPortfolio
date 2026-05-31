@@ -1215,6 +1215,10 @@ button:active,
   transform: scale(1.06);
 }
 
+.lightbox-close:active {
+  transform: scale(0.95) !important;
+}
+
 .lightbox-nav {
   position: fixed;
   top: 50%;
@@ -1246,6 +1250,10 @@ button:active,
 .lightbox-nav:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: translateY(-50%) scale(1.06);
+}
+
+.lightbox-nav:active {
+  transform: translateY(-50%) scale(0.95) !important;
 }
 
 .lightbox-prev {
