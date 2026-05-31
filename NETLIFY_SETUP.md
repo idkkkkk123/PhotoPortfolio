@@ -90,21 +90,34 @@ You do **not** create passwords in the code. You invite people by email in Netli
 4. You land on the site with `#invite_token=...` in the URL. A popup opens to **choose your password** (Netlify does **not** email a password — you create it here).
 5. After that, go to the admin URL and use **that email + the password you just chose**.
 
-**If “Accept invite” opens the normal website with no popup:** Netlify’s email link is probably missing the token. Fix the invite email (once):
+### 4b. Accept invites on the **free** plan (no Pro)
 
-1. Netlify → your site → **Identity** → **Emails** → **Invite template**.
-2. Find the invite link (`<a href=...>`). Replace it with:
+You do **not** need Pro to customize email templates. Use these steps instead:
 
-```html
-<a href="https://photoportfolioweb.netlify.app/invite.html#invite_token={{ .Token }}">Accept the invite</a>
-```
+**A. Set Identity “Site URL” (free, one time)**
 
-3. **Save** the template.
-4. **Identity** → **Invite users** → send a **new** invite (old links may be invalid).
+1. Netlify → site → **Identity** → **Settings** (or **Identity configuration**).
+2. Find **Site URL** (sometimes under “Identity settings” / “URLs”).
+3. Set it to exactly:  
+   `https://photoportfolioweb.netlify.app/invite.html`  
+   (not just the homepage).
+4. **Save**.
 
-Open the new email link → you should land on **invite.html** and get a **set password** popup (you choose the password).
+Default invite emails will then send people to `invite.html` with the token, where the site opens **set password**.
 
-Direct link shape: `https://photoportfolioweb.netlify.app/invite.html#invite_token=...`
+**B. Send a new invite**
+
+1. **Identity** → **Invite users** → your email → send.
+2. In the email, **right‑click** “Accept the invite” → **Copy link** (don’t just click if click fails).
+3. Paste the full link into the browser address bar.
+4. The URL should contain `invite_token` or `invite.html` — then choose your password in the popup.
+
+**C. If you already clicked a broken link**
+
+1. **Identity** → **Invite users** → send a **fresh** invite (old tokens expire).
+2. Or **Identity** → **Users** → your user → **Send password recovery** (if the user row exists).
+
+**You are not given a password in the email** — you **create** it on the invite / signup screen.
 
 **For your friend (photographer):**
 

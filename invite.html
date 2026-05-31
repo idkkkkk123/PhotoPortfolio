@@ -74,7 +74,9 @@
       if (!hasToken) {
         statusEl.textContent = 'No invite token in this link.';
         errorEl.hidden = false;
-        errorEl.textContent = 'Ask for a new invite in Netlify (Identity → Invite users). The email link must include invite.html or #invite_token= — see NETLIFY_SETUP.md.';
+        errorEl.innerHTML =
+          'Free plan: In Netlify set Identity <strong>Site URL</strong> to <code>https://photoportfolioweb.netlify.app/invite.html</code>, then send a <strong>new</strong> invite. ' +
+          'Or right‑click “Accept the invite” in the email → <strong>Copy link</strong> → paste here. See NETLIFY_SETUP.md.';
         homeLink.hidden = false;
         return;
       }

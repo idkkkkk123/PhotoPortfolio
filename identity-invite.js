@@ -18,8 +18,19 @@
     return null;
   }
 
+  /** Default Netlify invite emails (free plan) sometimes use ?token=&type=invite */
+  function parseDefaultInviteToken() {
+    const params = new URLSearchParams(window.location.search || '');
+    const type = (params.get('type') || '').toLowerCase();
+    const token = params.get('token');
+    if (token && (type === 'invite' || type === 'signup')) {
+      return decodeURIComponent(token);
+    }
+    return null;
+  }
+
   window.captureNetlifyIdentityTokens = function () {
-    const invite = parseToken('invite_token');
+    let invite = parseToken('invite_token') || parseDefaultInviteToken();
     const recovery = parseToken('recovery_token');
 
     if (invite) {
@@ -135,7 +146,9 @@
     const onHome = window.location.pathname === '/' ||
       window.location.pathname.endsWith('/index.html') ||
       window.location.pathname.endsWith('/');
-    const hasInviteInUrl = getHash().includes('invite_token') || parseToken('invite_token');
+    const hasInviteInUrl = getHash().includes('invite_token') ||
+      parseToken('invite_token') ||
+      parseDefaultInviteToken();
     let hasSaved = false;
     try {
       hasSaved = !!sessionStorage.getItem(STORAGE_INVITE);
