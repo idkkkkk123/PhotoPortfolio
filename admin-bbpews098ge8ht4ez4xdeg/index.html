@@ -184,6 +184,12 @@
         return cmsAvailable();
       }
 
+      function checkIdentityEnabled() {
+        return fetch('/.netlify/identity', { cache: 'no-store' })
+          .then(function (res) { return res.ok; })
+          .catch(function () { return false; });
+      }
+
       loadCmsScripts()
         .then(function (ok) {
           if (!ok) {
@@ -192,8 +198,16 @@
             );
             return;
           }
-          loadingEl.textContent = 'Editor ready. Log in to continue.';
-          setupIdentity();
+          return checkIdentityEnabled().then(function (identityOn) {
+            if (!identityOn) {
+              showError(
+                'Netlify Identity is not enabled on this site (that causes "Failed to load settings from /.netlify/identity"). In Netlify: open site photoportfolioweb → Identity → Enable Identity. Then Identity → Services → Git Gateway → Enable. See NETLIFY_SETUP.md in the repo.'
+              );
+              return;
+            }
+            loadingEl.textContent = 'Editor ready. Log in to continue.';
+            setupIdentity();
+          });
         })
         .catch(function () {
           showError('Editor failed to load. Refresh the page or try another browser.');

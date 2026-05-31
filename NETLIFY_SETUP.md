@@ -57,22 +57,57 @@ Public pages (`gallery.html`, `albums.html`, `portfolio.html`) load data from **
    - **Publish directory:** `.` (root)
 4. Deploy once. Note your site URL (e.g. `https://photoportfolioweb.netlify.app`).
 
-### 2. Enable Identity (login for admin only)
+### 2. Enable Identity (fixes “Failed to load settings from /.netlify/identity”)
 
-1. Netlify site → **Identity**.
-2. **Enable Identity**.
-3. **Registration preferences** → **Invite only** (so the public cannot create accounts).
+This error means **Identity is turned off** on Netlify. The admin login cannot work until you enable it.
+
+1. Go to [https://app.netlify.com](https://app.netlify.com) and log in.
+2. Click your site **`photoportfolioweb`** (or whatever the site is named).
+3. In the left sidebar, open **Identity** (under “Extensions” or “Site configuration”, depending on Netlify’s UI).
+4. Click **Enable Identity** (or **Set up Identity**).
+5. Under **Registration preferences**, choose **Invite only** — visitors cannot sign themselves up; only people you invite can log in.
+
+**Check it worked:** open  
+https://photoportfolioweb.netlify.app/.netlify/identity  
+in a browser. You should see JSON text, **not** a 404 page.
 
 ### 3. Enable Git Gateway (CMS → GitHub)
 
-1. **Identity** → **Services** → **Git Gateway** → **Enable**.
+1. Still under **Identity**, open the **Services** tab (or **Enable services**).
+2. Find **Git Gateway** and click **Enable**.
 
-Without Git Gateway, the admin UI cannot save changes to your repo.
+Without Git Gateway, login may work but **Publish** in the admin will fail.
 
-### 4. Invite your friend (or yourself)
+### 4. Give someone a login (invite flow)
 
-1. **Identity** → **Invite users** → enter email.
-2. They accept the invite from email, then set a password.
+You do **not** create passwords in the code. You invite people by email in Netlify:
+
+**For yourself (first time):**
+
+1. **Identity** → **Invite users** (or **Add users**).
+2. Enter **your** email address → send invite.
+3. Open that email from Netlify → click the link → **set a password**.
+4. Go to the admin URL → **Log in** → use that email + password.
+
+**For your friend (photographer):**
+
+1. **Identity** → **Invite users**.
+2. Enter **their** email (the one they actually use).
+3. They receive **“You’ve been invited to photoportfolioweb”** (or similar).
+4. They click the link in the email → create their password (one time).
+5. They open:  
+   https://photoportfolioweb.netlify.app/admin-bbpews098ge8ht4ez4xdeg/  
+   → **Log in** with that email + password.
+
+They never need a GitHub account. Only the Netlify invite + password.
+
+**Optional:** Under Identity → **Settings** → **Emails**, you can customize invite text.
+
+| Role | Can open admin? | Can change public site? |
+|------|-----------------|-------------------------|
+| You (site owner) | Yes, after invite | Yes, after Git Gateway |
+| Invited friend | Yes, with their invite | Yes |
+| Random visitor | No | No (view only) |
 
 ### 5. Confirm GitHub permissions
 
@@ -121,7 +156,9 @@ If JSON has photos but the gallery is empty, hard-refresh the page or check the 
 |---------|-----|
 | Admin shows old “Admin Panel” home page, not CMS | Deploy this repo version; folder `admin-bbpews098ge8ht4ez4xdeg/` must exist on GitHub. |
 | “Failed to load config.yml” | Open the exact admin URL above; `config.yml` must sit next to `index.html` in that folder. |
+| “Failed to load settings from /.netlify/identity” | **Enable Identity** on the Netlify site (step 2 above). |
 | Login works but Publish fails | Enable **Git Gateway**; confirm repo branch is `main`. |
+| Friend never got invite | Resend from **Identity → Invite users**; check spam folder. |
 | Changes never appear on site | Click **Publish** in CMS; wait for deploy; check `photos/gallery.json` on GitHub. |
 | Images broken on site | `src` should start with `/photos/uploads/` (CMS sets this automatically). |
 
