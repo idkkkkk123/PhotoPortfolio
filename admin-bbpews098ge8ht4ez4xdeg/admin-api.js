@@ -165,9 +165,22 @@
   let albumsSha = null;
 
   async function loadGalleryFromPublicJson() {
+    if (typeof loadJson === 'function') {
+      try {
+        const data = await loadJson(GALLERY_PATH);
+        if (data) {
+          const list = parseGalleryData(data).map(toAdminPhoto);
+          if (list.length) return list;
+        }
+      } catch (e) {
+        console.warn('loadJson failed:', e);
+      }
+    }
+
     const urls = [
+      'https://raw.githubusercontent.com/idkkkkk123/PhotoPortfolio/main/photos/gallery.json',
       '/photos/gallery.json',
-      'https://raw.githubusercontent.com/idkkkkk123/PhotoPortfolio/main/photos/gallery.json'
+      '../photos/gallery.json'
     ];
     for (let i = 0; i < urls.length; i++) {
       try {
@@ -307,10 +320,21 @@
       albumsSha = result.sha;
       return parseAlbumsData(result.data);
     } catch (gitErr) {
-      const response = await fetch('/.netlify/functions/load-albums', { cache: 'no-store' });
-      const data = await response.json();
-      if (!data.success) throw gitErr;
-      return data.albums || [];
+      try {
+        const response = await fetch('/.netlify/functions/load-albums', { cache: 'no-store' });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) return data.albums || [];
+        }
+      } catch (fnErr) {
+        console.warn('Server load-albums failed:', fnErr);
+      }
+      
+      if (typeof loadJson === 'function') {
+        const data = await loadJson(ALBUMS_PATH);
+        if (data) return parseAlbumsData(data);
+      }
+      return [];
     }
   }
 
