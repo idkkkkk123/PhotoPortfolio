@@ -70,7 +70,7 @@
       .map(encodeURIComponent)
       .join('/');
     let url = '/.netlify/git/github/contents/' + segments;
-    if (method === 'GET') url += '?ref=' + encodeURIComponent(BRANCH);
+    if (method === 'GET') url += '?ref=' + encodeURIComponent(BRANCH) + '&_=' + Date.now();
     return url;
   }
 
@@ -165,9 +165,9 @@
   let albumsSha = null;
 
   async function loadGalleryFromPublicJson() {
-    if (typeof loadJson === 'function') {
+    if (typeof window.loadJson === 'function') {
       try {
-        const data = await loadJson(GALLERY_PATH);
+        const data = await window.loadJson(GALLERY_PATH);
         if (data) {
           const list = parseGalleryData(data).map(toAdminPhoto);
           if (list.length) return list;
@@ -330,8 +330,8 @@
         console.warn('Server load-albums failed:', fnErr);
       }
       
-      if (typeof loadJson === 'function') {
-        const data = await loadJson(ALBUMS_PATH);
+      if (typeof window.loadJson === 'function') {
+        const data = await window.loadJson(ALBUMS_PATH);
         if (data) return parseAlbumsData(data);
       }
       return [];
