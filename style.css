@@ -1205,9 +1205,14 @@ button:active,
   pointer-events: auto;
 }
 
+@keyframes lightboxBtnFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .lightbox.active .lightbox-close {
   opacity: 1;
-  animation: lightboxToolbarIn 0.45s ease 0.05s both;
+  animation: lightboxBtnFadeIn 0.45s ease 0.05s both;
 }
 
 .lightbox-close:hover {
@@ -1244,7 +1249,7 @@ button:active,
 
 .lightbox.active .lightbox-nav {
   opacity: 1;
-  animation: lightboxToolbarIn 0.45s ease 0.1s both;
+  animation: lightboxBtnFadeIn 0.45s ease 0.1s both;
 }
 
 .lightbox-nav:hover {
