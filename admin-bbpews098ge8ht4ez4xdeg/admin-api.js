@@ -2,6 +2,7 @@
   const BRANCH = 'main';
   const GALLERY_PATH = 'photos/gallery.json';
   const ALBUMS_PATH = 'photos/albums.json';
+  const RAW_REPO_ROOT = 'https://raw.githubusercontent.com/idkkkkk123/PhotoPortfolio/main/';
 
   function toAdminPhoto(p) {
     return {
@@ -151,6 +152,7 @@
     if (!data) return [];
     if (Array.isArray(data)) return data;
     if (data.photos && Array.isArray(data.photos)) return data.photos;
+    if (data.entries && Array.isArray(data.entries)) return data.entries;
     return [];
   }
 
@@ -178,7 +180,7 @@
     }
 
     const urls = [
-      'https://raw.githubusercontent.com/idkkkkk123/PhotoPortfolio/main/photos/gallery.json',
+      RAW_REPO_ROOT + GALLERY_PATH,
       '/photos/gallery.json',
       '../photos/gallery.json'
     ];
@@ -205,6 +207,19 @@
     } catch (gitErr) {
       console.warn('Git Gateway load failed:', gitErr.message);
     }
+
+    if (!photos.length) {
+      try {
+        const response = await fetch(RAW_REPO_ROOT + GALLERY_PATH + '?_=' + Date.now(), { cache: 'no-store' });
+        if (response.ok) {
+          const data = await response.json();
+          photos = parseGalleryData(data).map(toAdminPhoto);
+        }
+      } catch (e) {
+        console.warn('Raw GitHub gallery load failed:', e);
+      }
+    }
+
     if (!photos.length) {
       photos = await loadGalleryFromPublicJson();
     }
