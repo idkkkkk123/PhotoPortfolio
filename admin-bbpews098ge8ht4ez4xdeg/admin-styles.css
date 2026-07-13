@@ -1,4 +1,19 @@
 /* Admin-specific styles */
+.admin-gallery-item,
+.admin-gallery-item * {
+    user-select: none;
+}
+
+.admin-move-btn,
+.admin-drag-handle,
+.gallery-item-checkbox,
+.gallery-item-checkbox input,
+.lightbox-close,
+.lightbox-nav,
+.lightbox-tool {
+    touch-action: manipulation;
+}
+
 .admin-actions {
     display: flex;
     gap: 1rem;
