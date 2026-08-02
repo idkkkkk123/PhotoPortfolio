@@ -174,6 +174,10 @@
         );
       }).join('');
 
+      galleryGrid.querySelectorAll('.admin-gallery-item').forEach(function (item, index) {
+        item.dataset.index = index;
+      });
+
       galleryGrid.querySelectorAll('.admin-drag-handle').forEach(function (handle) {
         handle.addEventListener('dragstart', onDragStart);
         handle.addEventListener('click', function (e) {
@@ -215,12 +219,26 @@
       hideLoader();
     }
 
+    function reorderGalleryDom(from, to) {
+      var nodes = Array.from(galleryGrid.children);
+      if (!nodes.length || from === to || from < 0 || to < 0 || from >= nodes.length || to >= nodes.length) return;
+
+      var [movedNode] = nodes.splice(from, 1);
+      nodes.splice(to, 0, movedNode);
+      galleryGrid.replaceChildren.apply(galleryGrid, nodes);
+
+      Array.from(galleryGrid.children).forEach(function (node, index) {
+        node.dataset.index = index;
+        node.classList.remove('admin-drag-over');
+      });
+    }
+
     function movePhoto(from, to) {
       if (to < 0 || to >= photos.length || from === to) return;
       var item = photos.splice(from, 1)[0];
       photos.splice(to, 0, item);
+      reorderGalleryDom(from, to);
       setOrderDirty(true);
-      renderGallery();
     }
 
     function onDragStart(e) {
@@ -228,6 +246,7 @@
       if (!item) return;
       dragFromIndex = parseInt(item.dataset.index, 10);
       e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(dragFromIndex));
       item.classList.add('admin-dragging');
       e.stopPropagation();
     }
@@ -417,7 +436,12 @@
     function onDragOver(e) {
       e.preventDefault();
       var item = e.target.closest('.admin-gallery-item');
-      if (item) item.classList.add('admin-drag-over');
+      if (item) {
+        galleryGrid.querySelectorAll('.admin-gallery-item').forEach(function (el) {
+          el.classList.remove('admin-drag-over');
+        });
+        item.classList.add('admin-drag-over');
+      }
     }
 
     function onDrop(e) {
