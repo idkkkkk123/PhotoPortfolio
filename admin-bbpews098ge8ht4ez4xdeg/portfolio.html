@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio — Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css?v=6">
+  <link rel="stylesheet" href="admin-styles.css">
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="/identity-invite.js"></script>
+  <script src="admin-auth.js?v=5"></script>
+  <script src="admin-api.js?v=5"></script>
+  <script src="admin-chrome.js?v=2"></script>
+</head>
+<body>
+  <nav class="nav glass">
+    <div class="nav-container">
+      <a class="nav-btn" href="index.html">Home</a>
+      <a class="nav-btn" href="upload.html">Upload</a>
+      <a class="nav-btn" href="gallery.html">Gallery</a>
+      <a class="nav-btn" href="albums.html">Albums</a>
+      <a class="nav-btn active" href="portfolio.html">Portfolio</a>
+      <a class="nav-btn" href="../portfolio.html">View site</a>
+    </div>
+  </nav>
+
+  <main class="container page-main">
+    <section id="portfolioAdmin">
+      <div class="section-header">
+        <h2>Portfolio Editor</h2>
+        <div class="admin-actions">
+          <button type="button" id="addPortfolioItemBtn" class="cta-button">Add portfolio card</button>
+        </div>
+      </div>
+      <p class="admin-gallery-hint">Build a collage-style portfolio with beautiful cards, captions, and descriptions. These items appear on the public Portfolio page.</p>
+      <div class="portfolio-admin-shell" id="portfolioAdminShell"></div>
+    </section>
+  </main>
+
+  <script src="../common.js"></script>
+  <script>
+    let portfolioItems = [];
+    let galleryOptions = [];
+
+    function normalizePortfolioItem(item) {
+      return {
+        id: item && item.id ? item.id : String(Date.now() + Math.random()),
+        title: item && item.title ? item.title : '',
+        description: item && item.description ? item.description : '',
+        src: item && item.src ? item.src : '',
+        createdAt: item && item.createdAt ? item.createdAt : new Date().toISOString(),
+        order: item && item.order != null ? item.order : 0,
+        layout: item && item.layout ? item.layout : (portfolioItems.length % 2 === 0 ? 'wide' : 'stacked'),
+        accent: item && item.accent ? item.accent : '#18181b'
+      };
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+
+    function renderPortfolioAdmin() {
+      const shell = document.getElementById('portfolioAdminShell');
+      if (!portfolioItems.length) {
+        shell.innerHTML = '<div class="portfolio-admin-empty-state">No portfolio cards yet. Add your first polished piece to start building a beautiful portfolio.</div>';
+        return;
+      }
+
+      shell.innerHTML = `
+        <div class="portfolio-admin-grid">
+          ${portfolioItems.map(function (item, index) {
+            const layout = item.layout || 'stacked';
+            return `
+              <div class="portfolio-admin-item portfolio-admin-item--${layout}">
+                <div class="portfolio-admin-item-preview" style="border-top: 4px solid ${escapeHtml(item.accent || '#18181b')};">
+                  ${item.src ? `<img src="${item.src}" alt="${escapeHtml(item.title || 'Portfolio item')}" loading="lazy">` : '<div class="portfolio-admin-item-preview-placeholder">Choose an image</div>'}
+                </div>
+                <div class="portfolio-admin-item-body">
+                  <label>
+                    <span>Title</span>
+                    <input type="text" value="${escapeHtml(item.title || '')}" data-field="title" data-index="${index}">
+                  </label>
+                  <label>
+                    <span>Description</span>
+                    <textarea data-field="description" data-index="${index}">${escapeHtml(item.description || '')}</textarea>
+                  </label>
+                  <label>
+                    <span>Image URL</span>
+                    <input type="text" value="${escapeHtml(item.src || '')}" data-field="src" data-index="${index}">
+                  </label>
+                  <label>
+                    <span>Layout</span>
+                    <select data-field="layout" data-index="${index}">
+                      <option value="stacked" ${layout === 'stacked' ? 'selected' : ''}>Stacked</option>
+                      <option value="wide" ${layout === 'wide' ? 'selected' : ''}>Wide</option>
+                      <option value="tall" ${layout === 'tall' ? 'selected' : ''}>Tall</option>
+                      <option value="mosaic" ${layout === 'mosaic' ? 'selected' : ''}>Mosaic</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Accent</span>
+                    <input type="color" value="${escapeHtml(item.accent || '#18181b')}" data-field="accent" data-index="${index}">
+                  </label>
+                  <label>
+                    <span>Choose from gallery</span>
+                    <select class="portfolio-admin-gallery-select" data-index="${index}">
+                      <option value="">Select a gallery photo</option>
+                      ${galleryOptions.map(function (photo) {
+                        const optValue = photo.src || photo.image || '';
+                        return `<option value="${escapeHtml(optValue)}" ${item.src === optValue ? 'selected' : ''}>${escapeHtml(photo.name || photo.title || 'Gallery photo')}</option>`;
+                      }).join('')}
+                    </select>
+                  </label>
+                  <button type="button" class="portfolio-admin-add-btn" data-action="use-gallery" data-index="${index}">Use selected gallery photo</button>
+                  <div class="portfolio-admin-meta">
+                    <span>${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'New'}</span>
+                    <button type="button" class="portfolio-admin-delete-btn" data-index="${index}">Remove</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+
+      shell.querySelectorAll('input, textarea, select').forEach(function (el) {
+        el.addEventListener('input', function () {
+          const idx = parseInt(el.dataset.index, 10);
+          const field = el.dataset.field;
+          if (portfolioItems[idx] && field) {
+            portfolioItems[idx][field] = el.value;
+            persistPortfolio();
+          }
+        });
+        el.addEventListener('change', function () {
+          const idx = parseInt(el.dataset.index, 10);
+          const field = el.dataset.field;
+          if (portfolioItems[idx] && field) {
+            portfolioItems[idx][field] = el.value;
+            persistPortfolio();
+          }
+        });
+      });
+
+      shell.querySelectorAll('.portfolio-admin-delete-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const idx = parseInt(btn.dataset.index, 10);
+          portfolioItems.splice(idx, 1);
+          persistPortfolio();
+          renderPortfolioAdmin();
+        });
+      });
+
+      shell.querySelectorAll('.portfolio-admin-add-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const idx = parseInt(btn.dataset.index, 10);
+          const selector = shell.querySelector('.portfolio-admin-gallery-select[data-index="' + idx + '"]');
+          if (portfolioItems[idx] && selector) {
+            portfolioItems[idx].src = selector.value;
+            persistPortfolio();
+            renderPortfolioAdmin();
+          }
+        });
+      });
+    }
+
+    async function persistPortfolio() {
+      const payload = {
+        items: portfolioItems.map(function (item, index) {
+          return Object.assign(normalizePortfolioItem(item), { order: index });
+        })
+      };
+      await fetch('/.netlify/functions/save-photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: 'photos/portfolio.json', content: payload })
+      });
+    }
+
+    async function loadGalleryOptions() {
+      try {
+        const gallery = await AdminAPI.loadGallery();
+        galleryOptions = Array.isArray(gallery) ? gallery : [];
+      } catch (e) {
+        galleryOptions = [];
+      }
+      renderPortfolioAdmin();
+    }
+
+    async function loadPortfolioFromServer() {
+      try {
+        const response = await fetch('/photos/portfolio.json?_=' + Date.now(), { cache: 'no-store' });
+        const data = response.ok ? await response.json() : null;
+        const items = Array.isArray(data && data.items) ? data.items : [];
+        portfolioItems = items.map(normalizePortfolioItem);
+      } catch (e) {
+        portfolioItems = [];
+      }
+      renderPortfolioAdmin();
+    }
+
+    document.getElementById('addPortfolioItemBtn').addEventListener('click', function () {
+      portfolioItems.unshift(normalizePortfolioItem({
+        title: 'New portfolio story',
+        description: 'Describe the feeling, mood, and context of this piece.',
+        src: '',
+        createdAt: new Date().toISOString(),
+        layout: ['stacked', 'wide', 'tall', 'mosaic'][portfolioItems.length % 4],
+        accent: ['#18181b', '#7c3aed', '#0f766e', '#c2410c'][portfolioItems.length % 4]
+      }));
+      persistPortfolio();
+      renderPortfolioAdmin();
+    });
+
+    window.addEventListener('admin-auth-ready', function () {
+      loadGalleryOptions();
+      loadPortfolioFromServer();
+    });
+  </script>
+</body>
+</html>

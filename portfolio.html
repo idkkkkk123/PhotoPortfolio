@@ -26,6 +26,8 @@
         <h2>Portfolio</h2>
         <p class="section-subtitle">Your friend’s most memorable work.</p>
       </div>
+
+      <div class="portfolio-grid" id="portfolioGrid" style="display:none;"></div>
       
       <div class="empty-state" id="portfolioEmpty">
         <div class="empty-state-icon">🎨</div>
@@ -112,18 +114,23 @@
       portfolioGrid.style.display = 'grid';
       portfolioEmpty.style.display = 'none';
 
-      portfolioGrid.innerHTML = portfolioItems.map((item, index) => `
-        <div class="portfolio-card" data-index="${index}" style="animation-delay:${Math.min(index * 0.05, 0.5)}s">
-          <div class="portfolio-card-img">
-            <img src="${item.src}" alt="${item.title || ''}" loading="lazy">
+      portfolioGrid.innerHTML = portfolioItems.map((item, index) => {
+        const layoutClass = item.layout === 'wide' ? 'portfolio-card--wide' : item.layout === 'tall' ? 'portfolio-card--tall' : item.layout === 'mosaic' ? 'portfolio-card--mosaic' : 'portfolio-card--stacked';
+        const accentStyle = item.accent ? `--portfolio-accent:${item.accent};` : '';
+        const cardStyle = `style="${accentStyle} animation-delay:${Math.min(index * 0.05, 0.5)}s"`;
+        return `
+          <div class="portfolio-card ${layoutClass}" data-index="${index}" ${cardStyle}>
+            <div class="portfolio-card-img">
+              <img src="${item.src}" alt="${item.title || ''}" loading="lazy">
+            </div>
+            <div class="portfolio-card-info">
+              <h3 class="portfolio-card-title">${(item.title || 'Untitled').length > 42 ? (item.title || 'Untitled').substring(0, 42) + '…' : item.title || 'Untitled'}</h3>
+              ${item.description ? `<p class="portfolio-card-desc">${item.description}</p>` : ''}
+              <span class="portfolio-card-date">${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</span>
+            </div>
           </div>
-          <div class="portfolio-card-info">
-            <h3 class="portfolio-card-title">${(item.title || 'Untitled').length > 42 ? (item.title || 'Untitled').substring(0, 42) + '…' : item.title || 'Untitled'}</h3>
-            ${item.description ? `<p class="portfolio-card-desc">${item.description}</p>` : ''}
-            <span class="portfolio-card-date">${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</span>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
 
       portfolioGrid.querySelectorAll('.portfolio-card').forEach(card => {
         card.addEventListener('click', () => {

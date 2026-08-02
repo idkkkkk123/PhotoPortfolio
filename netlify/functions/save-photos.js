@@ -23,7 +23,41 @@ exports.handler = async function (event) {
       };
     }
 
-    const body = JSON.parse(event.body);
+    const body = JSON.parse(event.body || '{}');
+    const targetPath = body.path || FILE_PATH;
+
+    if (targetPath === 'photos/portfolio.json') {
+      const items = Array.isArray(body.content && body.content.items)
+        ? body.content.items
+        : (Array.isArray(body.items) ? body.items : []);
+      const normalizedItems = items.map((item, index) => ({
+        id: item.id || String(Date.now() + Math.random()),
+        title: item.title || '',
+        description: item.description || '',
+        src: item.src || '',
+        createdAt: item.createdAt || new Date().toISOString(),
+        order: item.order != null ? item.order : index,
+        layout: item.layout || (index % 2 === 0 ? 'wide' : 'stacked'),
+        accent: item.accent || '#18181b'
+      }));
+
+      const file = await getFile(token, targetPath);
+      const payload = JSON.stringify({ items: normalizedItems }, null, 2);
+      await putFile(
+        token,
+        targetPath,
+        payload,
+        `Admin: update portfolio (${normalizedItems.length} items)`,
+        file ? file.sha : undefined
+      );
+
+      return {
+        statusCode: 200,
+        headers: corsHeaders(),
+        body: JSON.stringify({ success: true, count: normalizedItems.length })
+      };
+    }
+
     let photos = Array.isArray(body) ? body : (body.photos || []);
     photos = photos.map((p) => ({
       id: p.id || String(Date.now() + Math.random()),
