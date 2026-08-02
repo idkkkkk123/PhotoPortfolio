@@ -95,52 +95,23 @@
       return list.map(normalizePhoto).filter(Boolean);
     }
 
-    // Cover generation: auto-collage from first 4 photos.
-    function generateCoverDataUrl(photos, size = 320) {
-      const c = document.createElement('canvas');
-      c.width = size; c.height = size;
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = '#f4f4f5';
-      ctx.fillRect(0, 0, size, size);
-
-      const items = (photos || []).slice(0, 4);
-      if (!items || items.length === 0) return Promise.resolve(c.toDataURL('image/png'));
-
-      return new Promise(resolve => {
-        const count = Math.min(items.length, 4);
-        let loaded = 0;
-        const positions = count === 1
-          ? [[0, 0, size, size]]
-          : count === 2
-            ? [[0, 0, size/2, size], [size/2, 0, size/2, size]]
-            : count === 3
-              ? [[0, 0, size/2, size], [size/2, 0, size/2, size/2], [size/2, size/2, size/2, size/2]]
-              : [[0, 0, size/2, size/2], [size/2, 0, size/2, size/2], [0, size/2, size/2, size/2], [size/2, size/2, size/2, size/2]];
-
-        for (let i = 0; i < count; i++) {
-          const photo = items[i];
-          const img = new Image();
-          img.onload = () => {
-            const [x, y, w, h] = positions[i];
-            const gap = 2;
-            ctx.save();
-            ctx.beginPath();
-            ctx.roundRect(x + gap, y + gap, w - gap*2, h - gap*2, 8);
-            ctx.clip();
-            const scale = Math.max((w - gap*2) / img.width, (h - gap*2) / img.height);
-            const dw = img.width * scale, dh = img.height * scale;
-            ctx.drawImage(img, x + gap + (w - gap*2 - dw)/2, y + gap + (h - gap*2 - dh)/2, dw, dh);
-            ctx.restore();
-            loaded++;
-            if (loaded === count) resolve(c.toDataURL('image/png'));
-          };
-          img.onerror = () => {
-            loaded++;
-            if (loaded === count) resolve(c.toDataURL('image/png'));
-          };
-          img.src = photo.src;
-        }
-      });
+    function buildAlbumCoverMarkup(album) {
+      const photos = getAlbumPhotos(album).slice(0, 4);
+      if (photos.length) {
+        return `
+          <div class="album-card-cover-stack">
+            ${photos.map((photo, index) => `
+              <img class="album-card-cover-photo album-card-cover-photo--${index + 1}" src="${photo.src || photo.image || ''}" alt="${photo.name || ''}" loading="lazy">
+            `).join('')}
+          </div>
+        `;
+      }
+      return `
+        <div class="album-card-cover-stack album-card-cover-stack-placeholder">
+          <div class="album-card-cover-placeholder">🖼️</div>
+          <div class="album-card-cover-label">No photos yet</div>
+        </div>
+      `;
     }
 
     let lastAlbumsSig = '';
@@ -171,17 +142,17 @@
       for (let i = 0; i < albums.length; i++) {
         const album = albums[i];
         const photos = getAlbumPhotos(album);
-        const coverUrl = await generateCoverDataUrl(photos.slice(0, 4));
         const count = photos.length;
 
         cardsHtml.push(`
           <div class="album-card" data-album-idx="${i}" role="button" tabindex="0">
             <div class="album-card-image">
-              <img src="${coverUrl}" alt="${album.name || ''}">
+              ${buildAlbumCoverMarkup(album)}
             </div>
             <div class="album-card-info">
               <h3 class="album-card-title">${album.name || 'Album'}</h3>
               <p class="album-card-meta">${count} photo${count === 1 ? '' : 's'}</p>
+              ${album.description ? `<p class="album-card-desc">${album.description}</p>` : ''}
             </div>
           </div>
         `);

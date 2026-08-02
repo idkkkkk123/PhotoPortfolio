@@ -84,17 +84,62 @@
                     <button id="addPhotosToAlbumBtn" class="cta-button">Add Photos</button>
                     <button id="deleteAlbumBtn" class="cta-button" style="background: #e74c3c;">Delete Album</button>
                 </div>
-                <div class="album-photos-grid" id="albumPhotosGrid">
-                    <!-- Album photos will be loaded here -->
-                </div>
+                <div class="album-photos-grid" id="albumPhotosGrid"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Gallery Photo Picker Modal -->
+    <div class="modal" id="selectPhotosModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="selectPhotosTitle">Choose photos from your gallery</h3>
+                <button class="modal-close" id="closeSelectPhotos">&times;</button>
+            </div>
+            <div class="album-picker-toolbar">
+                <button type="button" id="addSelectedPhotosBtn" class="cta-button">Add selected photos</button>
+                <span id="selectedPhotosCount" class="album-picker-count">0 selected</span>
+            </div>
+            <div class="album-picker-grid" id="galleryPickerGrid"></div>
         </div>
     </div>
 
     <script src="../common.js"></script>
     <script>
-        // Admin Albums Management
         let albumsCache = [];
+        let currentAlbumIndex = null;
+        let galleryPhotosCache = [];
+        let selectedPickerPhotoIds = new Set();
+
+        function getAlbumPhotos(album) {
+            return Array.isArray(album && album.photos) ? album.photos : [];
+        }
+
+        function getAlbumCoverMarkup(album, index) {
+            const photos = getAlbumPhotos(album).slice(0, 4);
+            if (photos.length) {
+                return `
+                    <div class="album-cover-stack" onclick="openAlbumDetail(${index})">
+                        ${photos.map((photo, photoIndex) => `
+                            <img class="album-cover-photo album-cover-photo--${photoIndex + 1}" src="${photo.src || photo.image || ''}" alt="${photo.name || photo.title || 'Photo'}" loading="lazy">
+                        `).join('')}
+                    </div>
+                `;
+            }
+            if (album.cover) {
+                return `
+                    <div class="album-cover-stack" onclick="openAlbumDetail(${index})">
+                        <img class="album-cover-photo album-cover-photo--single" src="${album.cover}" alt="${album.name || 'Album cover'}" loading="lazy">
+                    </div>
+                `;
+            }
+            return `
+                <div class="album-cover-stack album-cover-stack-placeholder" onclick="openAlbumDetail(${index})">
+                    <div class="album-cover-placeholder-icon">🖼️</div>
+                    <div class="album-cover-placeholder-text">No photos yet</div>
+                </div>
+            `;
+        }
 
         async function persistAlbums() {
             await AdminAPI.saveAlbums(albumsCache);
@@ -120,79 +165,80 @@
         });
 
         function setupEventListeners() {
-            // Add album button
             document.getElementById('addAlbumBtn').addEventListener('click', () => {
-                document.getElementById('addAlbumModal').style.display = 'block';
+                document.getElementById('addAlbumModal').style.display = 'flex';
             });
 
-            // Cancel add album
             document.getElementById('cancelAddAlbum').addEventListener('click', () => {
                 document.getElementById('addAlbumModal').style.display = 'none';
             });
 
-            // Add album form
             document.getElementById('addAlbumForm').addEventListener('submit', (e) => {
                 e.preventDefault();
                 createAlbum();
             });
 
-            // Close album detail
             document.getElementById('closeAlbumDetail').addEventListener('click', () => {
                 document.getElementById('albumDetailModal').style.display = 'none';
             });
 
-            // Add photos to album
             document.getElementById('addPhotosToAlbumBtn').addEventListener('click', () => {
-                addPhotosToCurrentAlbum();
+                openPhotoPicker();
             });
 
-            // Delete album
             document.getElementById('deleteAlbumBtn').addEventListener('click', () => {
                 deleteCurrentAlbum();
             });
-        }
 
-        function loadAlbums() {
-            renderAlbums(albumsCache);
+            document.getElementById('deleteSelectedAlbumsBtn').addEventListener('click', () => {
+                deleteSelectedAlbums();
+            });
+
+            document.getElementById('closeSelectPhotos').addEventListener('click', () => {
+                document.getElementById('selectPhotosModal').style.display = 'none';
+            });
+
+            document.getElementById('addSelectedPhotosBtn').addEventListener('click', () => {
+                addSelectedPhotosToCurrentAlbum();
+            });
         }
 
         function renderAlbums(albums) {
             const grid = document.getElementById('albumGrid');
             const emptyState = document.getElementById('albumsEmpty');
-            
-            if (albums.length === 0) {
+
+            if (!albums.length) {
                 grid.style.display = 'none';
                 emptyState.style.display = 'block';
                 return;
             }
-            
+
             grid.style.display = 'grid';
             emptyState.style.display = 'none';
-            
+
             grid.innerHTML = albums.map((album, index) => `
                 <div class="album-item" data-index="${index}">
                     <div class="album-item-checkbox">
                         <input type="checkbox" class="album-select" data-index="${index}">
                     </div>
-                    <div class="album-cover" onclick="openAlbumDetail(${index})">
-                        <img src="${album.cover || 'https://picsum.photos/seed/album' + index + '/300/200.jpg'}" alt="${album.name}">
-                        <div class="album-overlay">
-                            <h3>${album.name}</h3>
-                            <p>${album.photos ? album.photos.length : 0} photos</p>
-                        </div>
+                    <div class="album-cover">
+                        ${getAlbumCoverMarkup(album, index)}
                     </div>
                     <div class="album-info">
-                        <h4>${album.name}</h4>
-                        <p>${album.description || ''}</p>
+                        <h4>${album.name || 'Untitled album'}</h4>
+                        <p>${album.description || 'Curated gallery set'}</p>
+                        <div class="album-meta">
+                            <span>${getAlbumPhotos(album).length} photo${getAlbumPhotos(album).length === 1 ? '' : 's'}</span>
+                        </div>
                     </div>
-                    <button class="album-item-delete" onclick="deleteAlbum(${index})">&times;</button>
+                    <button type="button" class="album-item-delete" onclick="event.stopPropagation(); deleteAlbum(${index})">&times;</button>
                 </div>
             `).join('');
         }
 
         async function createAlbum() {
-            const name = document.getElementById('albumName').value;
-            const description = document.getElementById('albumDescription').value;
+            const name = document.getElementById('albumName').value.trim();
+            const description = document.getElementById('albumDescription').value.trim();
             const coverInput = document.getElementById('albumCover');
             const newAlbum = {
                 name,
@@ -200,6 +246,11 @@
                 photos: [],
                 createdAt: new Date().toISOString()
             };
+
+            if (!name) {
+                alert('Please enter an album name.');
+                return;
+            }
 
             try {
                 if (coverInput.files.length > 0) {
@@ -234,62 +285,124 @@
 
         function openAlbumDetail(index) {
             const album = albumsCache[index];
-            
-            if (album) {
-                document.getElementById('albumDetailTitle').textContent = album.name;
-                document.getElementById('albumDetailModal').style.display = 'block';
-                document.getElementById('albumDetailModal').dataset.albumIndex = index;
-                loadAlbumPhotos(album.photos || []);
-            }
+            if (!album) return;
+            currentAlbumIndex = index;
+            document.getElementById('albumDetailTitle').textContent = album.name || 'Untitled album';
+            document.getElementById('albumDetailModal').style.display = 'flex';
+            document.getElementById('albumDetailModal').dataset.albumIndex = index;
+            loadAlbumPhotos(getAlbumPhotos(album));
         }
 
         function loadAlbumPhotos(photos) {
             const grid = document.getElementById('albumPhotosGrid');
-            
-            if (photos.length === 0) {
-                grid.innerHTML = '<p class="empty-state-text">No photos in this album</p>';
+
+            if (!photos.length) {
+                grid.innerHTML = '<div class="album-empty-state">No photos in this album yet. Add a few from your gallery to start building the collection.</div>';
                 return;
             }
-            
+
             grid.innerHTML = photos.map((photo, index) => `
                 <div class="album-photo-item">
-                    <img src="${photo.src || photo.image}" alt="${photo.name || photo.title || 'Photo'}">
+                    <img src="${photo.src || photo.image || ''}" alt="${photo.name || photo.title || 'Photo'}" loading="lazy">
                     <div class="album-photo-info">
-                        <h4>${photo.name || photo.title || 'Untitled'}</h4>
-                        <button class="album-photo-delete" onclick="removePhotoFromAlbum(${index})">&times;</button>
+                        <div>
+                            <h4>${photo.name || photo.title || 'Untitled'}</h4>
+                            ${photo.description ? `<p>${photo.description}</p>` : ''}
+                        </div>
+                        <button type="button" class="album-photo-delete" onclick="removePhotoFromAlbum(${index})">&times;</button>
                     </div>
                 </div>
             `).join('');
         }
 
-        async function addPhotosToCurrentAlbum() {
+        async function openPhotoPicker() {
             const albumIndex = document.getElementById('albumDetailModal').dataset.albumIndex;
-            const album = albumsCache[albumIndex];
+            if (albumIndex === undefined || albumIndex === '') return;
+            currentAlbumIndex = parseInt(albumIndex, 10);
             try {
-                const gallery = await AdminAPI.loadGallery();
-                if (!gallery.length) {
+                galleryPhotosCache = await AdminAPI.loadGallery();
+                if (!galleryPhotosCache.length) {
                     alert('Upload photos to the gallery first, then add them here.');
                     return;
                 }
-                const pick = gallery[0];
-                album.photos = (album.photos || []).concat([{
-                    name: pick.name,
-                    src: pick.src,
-                    description: pick.description || ''
-                }]);
-                await persistAlbums();
-                loadAlbumPhotos(album.photos);
+                selectedPickerPhotoIds = new Set();
+                renderGalleryPicker();
+                document.getElementById('selectPhotosModal').style.display = 'flex';
             } catch (err) {
-                alert('Could not add photo: ' + err.message);
+                alert('Could not load gallery photos: ' + err.message);
             }
+        }
+
+        function renderGalleryPicker() {
+            const grid = document.getElementById('galleryPickerGrid');
+            const countEl = document.getElementById('selectedPhotosCount');
+            if (!galleryPhotosCache.length) {
+                grid.innerHTML = '<div class="album-empty-state">No gallery photos are available yet.</div>';
+                countEl.textContent = '0 selected';
+                return;
+            }
+
+            grid.innerHTML = galleryPhotosCache.map((photo) => {
+                const id = photo.id || photo.src || photo.name || '';
+                const selected = selectedPickerPhotoIds.has(id);
+                return `
+                    <div class="album-picker-item ${selected ? 'selected' : ''}" data-photo-id="${id}">
+                        <img src="${photo.src || photo.image || ''}" alt="${photo.name || photo.title || 'Photo'}" loading="lazy">
+                        <div class="album-picker-item-body">
+                            <h4>${photo.name || photo.title || 'Untitled'}</h4>
+                            <p>${photo.description || 'Ready to add to this album'}</p>
+                        </div>
+                        <input class="album-picker-checkbox" type="checkbox" ${selected ? 'checked' : ''} data-photo-id="${id}">
+                    </div>
+                `;
+            }).join('');
+
+            grid.querySelectorAll('.album-picker-item').forEach((item) => {
+                item.addEventListener('click', (event) => {
+                    if (event.target instanceof HTMLInputElement) return;
+                    const id = item.dataset.photoId;
+                    if (selectedPickerPhotoIds.has(id)) selectedPickerPhotoIds.delete(id);
+                    else selectedPickerPhotoIds.add(id);
+                    renderGalleryPicker();
+                });
+            });
+
+            countEl.textContent = selectedPickerPhotoIds.size + ' selected';
+        }
+
+        async function addSelectedPhotosToCurrentAlbum() {
+            if (currentAlbumIndex === null || currentAlbumIndex === undefined) return;
+            const album = albumsCache[currentAlbumIndex];
+            if (!album) return;
+            const selectedPhotos = galleryPhotosCache.filter((photo) => {
+                const id = photo.id || photo.src || photo.name || '';
+                return selectedPickerPhotoIds.has(id);
+            });
+            if (!selectedPhotos.length) {
+                alert('Select at least one photo from the gallery.');
+                return;
+            }
+            const nextPhotos = (getAlbumPhotos(album) || []).concat(selectedPhotos.map((photo) => ({
+                name: photo.name || photo.title || 'Untitled',
+                src: photo.src || photo.image || '',
+                description: photo.description || '',
+                date: photo.date || photo.uploadedAt || new Date().toISOString()
+            })));
+            album.photos = nextPhotos;
+            await persistAlbums();
+            loadAlbumPhotos(album.photos);
+            document.getElementById('selectPhotosModal').style.display = 'none';
+            renderAlbums(albumsCache);
         }
 
         async function removePhotoFromAlbum(photoIndex) {
             const albumIndex = document.getElementById('albumDetailModal').dataset.albumIndex;
             const album = albumsCache[albumIndex];
+            if (!album) return;
             album.photos.splice(photoIndex, 1);
             await persistAlbums();
             loadAlbumPhotos(album.photos);
+            renderAlbums(albumsCache);
         }
 
         async function deleteAlbum(index) {
@@ -299,9 +412,22 @@
             refreshAlbums();
         }
 
+        async function deleteSelectedAlbums() {
+            const selected = Array.from(document.querySelectorAll('.album-select:checked')).map((input) => parseInt(input.dataset.index, 10));
+            if (!selected.length) {
+                alert('Select at least one album to delete.');
+                return;
+            }
+            if (!confirm('Delete the selected albums?')) return;
+            const remaining = albumsCache.filter((_, index) => !selected.includes(index));
+            albumsCache = remaining;
+            await persistAlbums();
+            refreshAlbums();
+        }
+
         function deleteCurrentAlbum() {
             const albumIndex = document.getElementById('albumDetailModal').dataset.albumIndex;
-            deleteAlbum(parseInt(albumIndex));
+            deleteAlbum(parseInt(albumIndex, 10));
             document.getElementById('albumDetailModal').style.display = 'none';
         }
     </script>
