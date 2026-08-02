@@ -8,22 +8,36 @@
     '.nav-container{flex-wrap:wrap;justify-content:center;gap:.25rem}' +
     '@media(max-width:720px){.admin-account-bar{top:auto;bottom:1rem;right:50%;transform:translateX(50%)}}';
 
-  const styleEl = document.createElement('style');
-  styleEl.textContent = STYLE;
-  document.head.appendChild(styleEl);
+  let emailEl = null;
+  let logoutBtn = null;
+  let bar = null;
 
-  const bar = document.createElement('div');
-  bar.className = 'admin-account-bar';
-  bar.hidden = true;
-  bar.innerHTML =
-    '<span class="admin-account-email" id="admin-account-email"></span>' +
-    '<button type="button" class="admin-account-logout" id="admin-account-logout">Log out</button>';
-  document.body.appendChild(bar);
+  function initChrome() {
+    if (!document.body || !document.head) return false;
+    if (bar) return true;
 
-  const emailEl = document.getElementById('admin-account-email');
-  const logoutBtn = document.getElementById('admin-account-logout');
+    const styleEl = document.createElement('style');
+    styleEl.textContent = STYLE;
+    document.head.appendChild(styleEl);
+
+    bar = document.createElement('div');
+    bar.className = 'admin-account-bar';
+    bar.hidden = true;
+    bar.innerHTML =
+      '<span class="admin-account-email" id="admin-account-email"></span>' +
+      '<button type="button" class="admin-account-logout" id="admin-account-logout">Log out</button>';
+    document.body.appendChild(bar);
+
+    emailEl = document.getElementById('admin-account-email');
+    logoutBtn = document.getElementById('admin-account-logout');
+    logoutBtn.addEventListener('click', function () {
+      if (window.netlifyIdentity) window.netlifyIdentity.logout();
+    });
+    return true;
+  }
 
   function showAccount(user) {
+    if (!initChrome()) return;
     const email =
       (user && (user.email || (user.user_metadata && user.user_metadata.email))) || 'Signed in';
     emailEl.textContent = email;
@@ -31,12 +45,9 @@
   }
 
   function hideAccount() {
+    if (!initChrome()) return;
     bar.hidden = true;
   }
-
-  logoutBtn.addEventListener('click', function () {
-    if (window.netlifyIdentity) window.netlifyIdentity.logout();
-  });
 
   window.addEventListener('admin-auth-ready', function () {
     const user = window.netlifyIdentity && window.netlifyIdentity.currentUser();
@@ -50,5 +61,11 @@
       showAccount(user);
     });
     window.netlifyIdentity.on('logout', hideAccount);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initChrome, { once: true });
+  } else {
+    initChrome();
   }
 })();

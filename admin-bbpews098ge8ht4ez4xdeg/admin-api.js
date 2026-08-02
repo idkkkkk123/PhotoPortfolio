@@ -51,15 +51,45 @@
     if (!identity) {
       throw new Error('Netlify Identity is not loaded. Refresh the page and try again.');
     }
-    const user = identity.currentUser();
+
+    const authReady = window.__adminAuthReadyPromise;
+    if (authReady) {
+      try {
+        await Promise.race([
+          authReady,
+          new Promise(function (resolve) {
+            window.setTimeout(resolve, 4000);
+          })
+        ]);
+      } catch (error) {
+        console.warn('Auth wait failed:', error);
+      }
+    }
+
+    let user = identity.currentUser ? identity.currentUser() : null;
+    if (!user && typeof identity.open === 'function') {
+      try {
+        identity.open('login');
+      } catch (error) {
+        console.warn('Could not open login modal:', error);
+      }
+    }
+
     if (!user) {
-      throw new Error('Please log in to the admin panel first.');
+      throw new Error('Please log in to the admin panel first. If you are already logged in, refresh the page and try again.');
     }
     if (typeof user.jwt === 'function') {
-      return user.jwt();
+      const token = await user.jwt();
+      if (token) return token;
     }
     if (user.token && user.token.access_token) {
       return user.token.access_token;
+    }
+    if (user.access_token) {
+      return user.access_token;
+    }
+    if (user.token) {
+      return user.token;
     }
     throw new Error('Could not read your login session. Log out and log in again.');
   }
@@ -223,16 +253,20 @@
     if (!photos.length) {
       photos = await loadGalleryFromPublicJson();
     }
+
     if (!photos.length) {
       try {
         const response = await fetch('/.netlify/functions/load-photos', { cache: 'no-store' });
-        const data = await response.json();
-        if (data.success) photos = (data.photos || []).map(toAdminPhoto);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) photos = (data.photos || []).map(toAdminPhoto);
+        }
       } catch (e) {
         console.warn('Server load failed:', e);
       }
     }
-    return photos;
+
+    return photos.map(toAdminPhoto);
   }
 
   async function saveGallery(photos) {
@@ -253,19 +287,20 @@
       return { success: true };
     } catch (gitErr) {
       console.warn('Git Gateway save failed, trying server:', gitErr.message);
-      const response = await fetch('/.netlify/functions/save-photos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(
-          gitErr.message +
-            ' Or add GITHUB_TOKEN in Netlify environment variables (see NETLIFY_SETUP.md).'
-        );
+      try {
+        const response = await fetch('/.netlify/functions/save-photos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (!data.success) {
+          throw new Error(data.error || gitErr.message || 'Save failed');
+        }
+        return data;
+      } catch (serverErr) {
+        throw new Error(serverErr && serverErr.message ? serverErr.message : gitErr.message);
       }
-      return data;
     }
   }
 
@@ -304,28 +339,28 @@
       return await uploadFilesViaGit(files);
     } catch (gitErr) {
       console.warn('Git Gateway upload failed, trying server:', gitErr.message);
-      const response = await fetch('/.netlify/functions/upload-media', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          files: files.map(function (f) {
-            return {
-              id: f.id,
-              name: f.name,
-              dataBase64: f.dataUrl || f.dataBase64,
-              size: f.size || 0
-            };
+      try {
+        const response = await fetch('/.netlify/functions/upload-media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            files: files.map(function (f) {
+              return {
+                id: f.id,
+                name: f.name,
+                dataBase64: f.dataUrl || f.dataBase64,
+                size: f.size || 0
+              };
+            })
           })
-        })
-      });
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(
-          gitErr.message +
-            ' Enable Git Gateway (Identity → Services), or set GITHUB_TOKEN on Netlify.'
-        );
+        });
+        const data = await response.json();
+        if (data.success) return data.files || [];
+        throw new Error(data.error || 'Upload failed');
+      } catch (serverErr) {
+        console.warn('Server upload failed:', serverErr.message);
+        throw new Error(serverErr && serverErr.message ? serverErr.message : gitErr.message);
       }
-      return data.files || [];
     }
   }
 

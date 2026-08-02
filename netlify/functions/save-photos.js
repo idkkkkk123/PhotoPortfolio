@@ -18,7 +18,7 @@ exports.handler = async function (event) {
         headers: corsHeaders(),
         body: JSON.stringify({
           success: false,
-          error: 'GITHUB_TOKEN is not set in Netlify. Add it under Site configuration → Environment variables.'
+          error: 'Netlify is missing GITHUB_TOKEN. Add it in Site configuration → Environment variables, then redeploy.'
         })
       };
     }

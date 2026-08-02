@@ -18,17 +18,22 @@ function githubRequest(options, body) {
   });
 }
 
+function buildGithubHeaders(token) {
+  const headers = {
+    'User-Agent': 'PhotoPortfolio-App',
+    Accept: 'application/vnd.github.v3+json'
+  };
+  if (token) headers.Authorization = `token ${token}`;
+  return headers;
+}
+
 async function getFile(token, path) {
   const { statusCode, data } = await githubRequest({
     hostname: 'api.github.com',
     port: 443,
     path: `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`,
     method: 'GET',
-    headers: {
-      Authorization: `token ${token}`,
-      'User-Agent': 'PhotoPortfolio-App',
-      Accept: 'application/vnd.github.v3+json'
-    }
+    headers: buildGithubHeaders(token)
   });
   if (statusCode === 200) {
     return JSON.parse(data);
@@ -52,8 +57,7 @@ async function putFile(token, path, content, message, sha, isBinary) {
     path: `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`,
     method: 'PUT',
     headers: {
-      Authorization: `token ${token}`,
-      'User-Agent': 'PhotoPortfolio-App',
+      ...buildGithubHeaders(token),
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(body)
     }
