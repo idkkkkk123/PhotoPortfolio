@@ -1,1 +1,10 @@
- {"albums":[]}
+{
+  "albums": [
+    {
+      "name": "test album",
+      "description": "testing photos",
+      "photos": [],
+      "createdAt": "2026-08-02T15:52:29.781Z"
+    }
+  ]
+}
