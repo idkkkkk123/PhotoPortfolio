@@ -248,18 +248,64 @@
 }
 
 .album-cover {
-    padding: 0.8rem;
+    padding: 0;
     background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-    min-height: 220px;
+    border-radius: 18px 18px 0 0;
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
 }
 
 .album-cover .album-cover-stack,
 .album-cover .album-cover-stack-placeholder {
     width: 100%;
     height: 100%;
-    min-height: 180px;
-    border-radius: 14px;
+    min-height: 0;
+    border-radius: 0;
     overflow: hidden;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.3rem;
+    padding: 0.35rem;
+    background: linear-gradient(135deg, #f4f4f5, #e4e4e7);
+}
+
+.album-cover .album-cover-stack-placeholder {
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.45rem;
+    color: #71717a;
+    font-size: 0.95rem;
+}
+
+.album-cover .album-cover-placeholder-icon {
+    font-size: 2rem;
+}
+
+.album-cover .album-cover-placeholder-text {
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.album-cover .album-cover-photo {
+    width: 100%;
+    height: 100%;
+    min-height: 110px;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+}
+
+.album-cover .album-cover-photo--1 {
+    grid-column: 1 / -1;
+    min-height: 140px;
+}
+
+.album-cover .album-cover-photo--2,
+.album-cover .album-cover-photo--3,
+.album-cover .album-cover-photo--4 {
+    min-height: 80px;
 }
 
 .album-info {
