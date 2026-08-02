@@ -33,6 +33,14 @@
     let invite = parseToken('invite_token') || parseDefaultInviteToken();
     const recovery = parseToken('recovery_token');
 
+    if (!invite) {
+      try {
+        invite = sessionStorage.getItem(STORAGE_INVITE);
+      } catch (e) {
+        invite = null;
+      }
+    }
+
     if (invite) {
       try {
         sessionStorage.setItem(STORAGE_INVITE, invite);
@@ -50,6 +58,12 @@
 
     if (saved && !hash.includes('invite_token')) {
       const target = window.location.pathname + window.location.search + '#invite_token=' + encodeURIComponent(saved);
+      window.location.replace(target);
+      return true;
+    }
+
+    if (invite && !hash.includes('invite_token')) {
+      const target = window.location.pathname + window.location.search + '#invite_token=' + encodeURIComponent(invite);
       window.location.replace(target);
       return true;
     }

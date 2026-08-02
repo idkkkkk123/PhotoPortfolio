@@ -32,6 +32,7 @@
     }
     .card h1 { margin: 0 0 0.75rem; font-size: 1.35rem; }
     .card p { margin: 0 0 1rem; color: #52525b; line-height: 1.55; font-size: 0.95rem; }
+    .muted { font-size: 0.875rem; color: #71717a; margin-top: 0.75rem; }
     .btn {
       display: inline-block;
       width: 100%;
@@ -55,7 +56,8 @@
   <div class="card">
     <h1>Complete your admin invite</h1>
     <p id="status">Loading…</p>
-    <p id="hint" hidden>Choose a password in the Netlify popup (center or behind this box). That same password works for admin login.</p>
+    <p id="hint" hidden>Choose a password in the Netlify popup. This password becomes your admin password for future sign-ins.</p>
+    <p class="muted" id="inviteTip">Open the invite link from Netlify, then complete the password step in the popup.</p>
     <button type="button" class="btn" id="openSignup" hidden>Open set-password form</button>
     <a href="/" class="btn btn-secondary" id="homeLink">Back to website</a>
     <p class="err" id="error" hidden></p>
@@ -68,6 +70,7 @@
       var ADMIN = '/admin-bbpews098ge8ht4ez4xdeg/';
       var statusEl = document.getElementById('status');
       var hintEl = document.getElementById('hint');
+      var tipEl = document.getElementById('inviteTip');
       var errorEl = document.getElementById('error');
       var openBtn = document.getElementById('openSignup');
 
@@ -119,6 +122,7 @@
             return;
           }
           hintEl.hidden = false;
+          tipEl.hidden = false;
           openBtn.hidden = false;
           statusEl.textContent = 'Set your password in the popup (or click the button below).';
         });
@@ -151,8 +155,8 @@
           statusEl.textContent = 'No invite token in this link.';
           errorEl.hidden = false;
           errorEl.innerHTML =
-            'Right-click “Accept the invite” in your email → Copy link → paste the full URL here. ' +
-            'It must include <code>#invite_token=</code>. Then send a new invite from Netlify if needed.';
+            'This page needs the full Netlify invite link. Open the invite email again, copy the full link, and paste it here. ' +
+            'It must include <code>#invite_token=</code>. If the link is old, send a new invite from Netlify.';
           return;
         }
 

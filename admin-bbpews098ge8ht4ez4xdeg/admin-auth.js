@@ -41,6 +41,13 @@
     identity.on('init', function (user) {
       if (user && (user.id || user.email || user.jwt || user.token || user.access_token)) {
         resolveReady(user);
+      } else if (!authResolved) {
+        window.setTimeout(function () {
+          const fallbackUser = identity.currentUser ? identity.currentUser() : null;
+          if (fallbackUser && (fallbackUser.id || fallbackUser.email || fallbackUser.jwt || fallbackUser.token || fallbackUser.access_token)) {
+            resolveReady(fallbackUser);
+          }
+        }, 800);
       }
     });
 
