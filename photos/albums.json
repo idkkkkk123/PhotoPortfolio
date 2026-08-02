@@ -1,3 +1,23 @@
 {
-  "albums": []
+  "albums": [
+    {
+      "name": "test album",
+      "description": "testing photos",
+      "photos": [
+        {
+          "name": "Screenshot_Correspondence_Folder_Setup_20251024.png",
+          "src": "https://raw.githubusercontent.com/idkkkkk123/PhotoPortfolio/main/photos/uploads/1785679196038sp0mtbovp-Screenshot_Correspondence_Folder_Setup_20251024.png?cb=1785679196038sp0mtbovp",
+          "description": "",
+          "date": "2026-08-02T13:59:57.347Z"
+        },
+        {
+          "name": "ChatGPT Image May 30, 2026, 11_27_01 PM.png",
+          "src": "https://raw.githubusercontent.com/idkkkkk123/PhotoPortfolio/main/photos/uploads/1780241220651f3uar8w3z-ChatGPT-Image-May-30--2026--11_27_01-PM.png?cb=1780241220651f3uar8w3z",
+          "description": "",
+          "date": "2026-05-31T15:27:03.463Z"
+        }
+      ],
+      "createdAt": "2026-08-02T16:08:53.097Z"
+    }
+  ]
 }
